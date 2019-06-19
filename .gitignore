@@ -1,0 +1,33 @@
+# 忽略该项目根目录下所有文件及文件夹；
+# 注意不能忽略根目录，否则所有根目录下的都不能被track。
+# 忽略根目录下的所有。
+/*
+
+# 不忽略根目录下的/.gitignore
+!/.gitignore
+
+# 不忽略根目录下的目录/1/
+!/1/
+
+# 对于/1/，如果忽略的东西比较多，可以先忽略全部，然后添加小部分；
+# 如果忽略的较少，可以直接忽略较少的那部分。
+
+/1/*
+!/1/cpp/
+!/1/DL/
+!/1/git/
+!/1/linux/
+!/1/matlab/
+!/1/reference/
+!/1/shell/
+!/1/MCU/
+
+/1/MCU/*
+!/1/MCU/MicroCOS/
+/1/MCU/MicroCOS/*
+!/1/MCU/MicroCOS/note/
+!/1/MCU/STM32/
+/1/MCU/STM32/*
+!/1/MCU/STM32/library/
+/1/MCU/STM32/library/*
+!/1/MCU/STM32/library/STM32Note/

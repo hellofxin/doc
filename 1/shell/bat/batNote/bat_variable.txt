@@ -1,0 +1,17 @@
+:: 例1：设定固定变量
+@echo off
+set "name=张三"
+echo.%name%
+pause
+
+:: 设定自行输入变量
+@echo off
+set /p name=请输入你的名字，然后回车
+echo 你的名字是：%name%
+pause 
+ 
+:: 例3：设定某个文本为变量
+@echo off
+set /p name=<c:\1.txt
+echo.文本内容为：%name%
+pause

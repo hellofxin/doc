@@ -1,0 +1,9 @@
+    1、如果启动引导器选择 /dev/sda，那么将使用ubuntu的引导器代替windows的引导器；
+此时为了引导windows，需要增加启动项，在ubuntu中执行sudo update-grub，自动查找windows loader，并将其写入/boot/grub/grub.cfg中。
+    如果启动引导器选择其他，比如 /dev/sda5(/boot)，则ubuntu有独立的启动引导器；需要windows上安装easybcd等软件来添加ubuntu启动项。
+
+    2、grub引导时，设置默认选项和默认超时时间。
+    修改 /etc/default/grub 文件，将其中两项：default和timeout修改为目标值，保存退出。
+    注意，此文件为只读，双击打开修改后不能保存，可以这样：
+        sudo gedit /etc/default/grub
+        然后修改对应值，可以保存了。

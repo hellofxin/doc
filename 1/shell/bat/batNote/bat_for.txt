@@ -1,0 +1,48 @@
+@echo off
+echo ***最基本for用法
+for %%i in (1 2 3) do echo %%i
+echo *end
+rem pause
+
+echo 磁盘分区如下：
+set str=c d e f g h i j k l m n o p q r s t u v w x y z
+for %%i in (%str%) do if exist %%i: echo %%i:
+echo *end
+rem pause
+
+echo 当前目录的文件：
+set counter=1
+for %%i in (*) do echo %%i 
+rem for %%i in (*.*) do echo "%%i"
+echo *end
+rem pause
+
+echo 文件名长度，不含后缀，<=5个字符的文件：
+for %%i in (?????.*) do echo %%i
+echo *end
+:: rem 和 :: 都表示注释 pause
+
+echo *** 文本解析 for /f 基本用法
+for /f "delims=, tokens=1,2,3 skip=2 " %%i in (startExeFile.js) do echo %%i %%j
+echo *end
+rem pause
+
+echo * 变量延时扩展 方式1：
+set counter=0;
+setlocal enabledelayedexpansion
+for %%i in (1,2,3,4,5 ) do (
+    set /a counter+=1
+    echo !counter!
+)
+echo *end
+rem pause
+
+echo * 变量延时扩展 方式2：
+set counter=0;
+for %%i in (1,2,3,4,5 ) do (
+    set /a counter+=1
+    call echo %%counter%%
+)
+echo *end
+pause
+

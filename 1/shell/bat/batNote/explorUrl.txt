@@ -1,0 +1,3 @@
+@set /p pathh=explorer path:    
+@echo % pathh%   
+explorer %pathh%   

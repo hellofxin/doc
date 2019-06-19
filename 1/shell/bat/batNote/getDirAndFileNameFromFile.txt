@@ -1,0 +1,31 @@
+rem 通过后缀找到文件，然后得到文件的文件名和文件路径
+@echo off
+setlocal enabledelayedexpansion
+for /r %cd% %%i in (*.blv) do (
+    echo i=%%i
+
+    set pi=%%~pi
+    echo pi=!pi!
+    set ni=%%~ni
+    echo ni=!ni!
+    set xi=%%~xi
+    echo xi=!xi!
+    set si=%%~si
+    echo si=!si!
+    set ai=%%~ai
+    echo ai=!ai!
+    set ti=%%~ti
+    echo ti=!ti!
+    set zi=%%~zi
+    echo zi=!zi!
+
+    rem 组合
+    echo ~dpi=%%~dpi
+    echo ~nxi=%%~nxi
+    echo ~fsi=%%~fsi
+)
+pause
+set a=kk\dd/gg.flv
+echo %a%
+echo !a!
+pause

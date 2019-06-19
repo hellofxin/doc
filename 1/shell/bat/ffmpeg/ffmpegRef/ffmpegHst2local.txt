@@ -1,0 +1,10 @@
+@echo off
+rem D: echo.pause
+rem cd D:\2017\advanced\ffmpeg\bin
+set /p sourceUri= sourceUri: 
+set /p outputFilenameWithSurfix= outputFilenameWithSurfix: 
+echo sourceUri = %sourceUri% 
+echo outputFilenameWithSurfix = %outputFilenameWithSurfix%
+echo.
+ffmpeg -i %sourceUri%  %outputFilenameWithSurfix%
+pause

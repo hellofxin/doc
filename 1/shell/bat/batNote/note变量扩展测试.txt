@@ -1,0 +1,38 @@
+@echo off
+echo 1
+echo 文件本身：
+echo %0
+pause
+
+echo 文件盘符：
+echo %~d0
+pause
+
+echo 文件路径：
+echo %~p0
+pause
+
+echo 文件盘符和路径：
+echo %~dp0
+pause
+
+echo "#2"
+echo 完整合理路径：
+echo %~f0
+pause
+
+echo 文件名：
+echo %~n0
+pause
+
+echo 文件后缀：
+echo %~x0
+pause
+
+echo 文件名和文件后缀：
+echo %~nx0
+pause
+
+echo 文件短路径：（貌似无效果）：
+echo %~s0
+pause
