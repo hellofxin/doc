@@ -2,6 +2,7 @@
 #define LINKED_LIST_INT_H
 
 #include "iostream"
+using namespace std;
 
 template<typename T>struct Node {
 	T data;

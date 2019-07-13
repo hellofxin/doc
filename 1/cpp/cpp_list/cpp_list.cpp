@@ -1,7 +1,6 @@
 // list_Int.cpp : 定义控制台应用程序的入口点。
 //
 
-#include "stdafx.h"
 #include "linked_list.h"
 #include "iostream"
 #include "DLinked_list.h"

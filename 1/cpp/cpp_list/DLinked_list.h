@@ -110,9 +110,11 @@ template<typename T> NodeDLinkedList<T>* DLinkedList<T>::locate(T element) {
 
 }
 
+/**
 template<typename T> NodeDLinkedList<T>* DLinkedList<T>::retrieve(NodeDLinkedList<T>* p) {
 
 }
+/**/
 
 
 

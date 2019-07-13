@@ -53,3 +53,4 @@ git remote add origin url
 git config --global user.email "hellofxin@qq.com"
 git pull origin master:master
 git branch -u origin/master
+git push

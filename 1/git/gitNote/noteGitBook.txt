@@ -182,7 +182,7 @@ Git 使用两种主要类型的标签：轻量标签（lightweight）与附注标签（annotated）。
     这会给你一个用于工作的本地分支，并且起点位于 origin/serverfix。
 2.5.2 跟踪分支
     1）从一个远程跟踪分支检出一个本地分支会自动创建一个叫做 “跟踪分支”。跟踪分支是与远程分支有直接关系的本地分支。
-    !!! checkout追踪新分支：
+    !!! checkout追踪新分支，也即新建分支并跟踪某分支：
     git checkout -b [branch] [remotename]/[branch]。
     2）当克隆一个仓库时，它通常会自动地创建一个跟踪 origin/master 的 master 分支。 
     3）Git 提供了 --track 快捷方式：
