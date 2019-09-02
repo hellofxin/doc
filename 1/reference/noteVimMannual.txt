@@ -1,0 +1,73 @@
+1.1 
+jumping around
+
+    CTRL-]: 超链接跳转;
+    CTRL-o: jump back,o stands for older;
+    
+
+
+2 edit file
+
+2.1 first time
+2.2 inserting text
+2.3 moving around
+2.4 deleting characters
+2.5 undo and redo
+2.6 other editing commands
+2.7 getting out
+2.8 finding help 
+
+2.1 for the first time
+
+    start vim: gvim file.txt
+    
+2.2 inserting text
+
+    :set showmode
+    i: insert mode
+
+2.3 moving around
+
+    h: left
+    l: right
+    j: roll up
+    k: roll down
+
+2.4 deleting characters
+
+    x: delete the character under the cursor
+    dd: to delete a line
+
+2.5 undo and redo
+
+    u: undo
+    U: undo line
+    CTRL-r: redo
+
+2.6 other editing commands
+    i: 在光标前面插入
+    a: append,在光标后增加
+    o: open a new,empty line below the cursor
+    O: above the cursor
+    count:3x = xxx
+
+2.7 getting out
+
+    ZZ: write and exit
+    :q!: quit and throw things away
+    :e!: reload the original version of the file
+
+2.8 finding help
+
+    :help: get the generic help
+    :help {subject}
+	:hepl x
+	:help index
+	:help CTRL-a
+
+
+
+
+
+
+
