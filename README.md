@@ -9,22 +9,26 @@
 ### title
 ```
 ### title  
+
+-----
   
 ```
 一级目录
   ===
 ```   
-
 一级目录  
   === 
+  
+-----
  
 ```
 title2 
   ---  
 ```
-
 title2  
  ----  
+ 
+-----
 
 ## 字体
 - 斜体  
@@ -32,18 +36,26 @@ title2
 *what* or _what_ 
 ```
 *what* or _what_  
+
+---
+
   
 - 粗体
 ```
-**斜体** or __斜体__
+**粗体** or __粗体__
 ```
-**斜体** or __斜体__    
+**粗体** or __粗体__   
+
+-----
+
   
 - 粗斜体
 ```
 ***粗斜体*** or ___粗斜体___ 
 ```
 ***粗斜体*** or ___粗斜体___  
+
+-----
   
 ## 文本
 - 删除线  
@@ -51,6 +63,8 @@ title2
 ~~content~~  
 ```
 ~~content~~  
+
+-----
 
 - 横线  
 ```
@@ -64,6 +78,8 @@ title2
 ```
 [title](url "hint")  
 
+-----
+
 ## 图片
 ```
 ![title](url)  
@@ -74,6 +90,8 @@ title2
 [![description](address "description")](http://url "description")  
 ```
 [![description](address "description")](http://url "description")  
+
+-----
   
 ## 列表
 ```
@@ -90,6 +108,8 @@ title2
 1. item1  
 2. item2  
   2.1 item2.1  
+  
+-----
 
 ## 表格
 ```
@@ -112,10 +132,14 @@ field1 | field2 | field3
 --- | :---: | ---: 
 value111|value222|value333
 
+-----
+
 
 ## 引用
 `> 这里是引用的内容`  
 > 这里是引用的内容  
+
+-----
 
 ## 代码段
 ```
