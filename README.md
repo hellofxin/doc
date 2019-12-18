@@ -152,10 +152,9 @@ main();
 ```
 代码块
 ```
-
-    column1
-    column2
-    column3
+    func1
+    func2
+    func3
 	
 ```cpp
 c++1
