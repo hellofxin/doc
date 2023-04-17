@@ -1,0 +1,2 @@
+使用管理员打开powerShell，执行：
+Get-AppxPackage *WindowsStore* | Remove-AppxPackage

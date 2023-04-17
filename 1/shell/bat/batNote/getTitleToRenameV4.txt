@@ -1,0 +1,89 @@
+1@echo off
+REM 声明采用UTF-8编码,可以处理UTF-8编码的中文，而不会出现乱码情况
+chcp 65001
+mkdir %cd%\video
+setlocal enabledelayedexpansion
+for /r %~dp0 %%s in (entry.json) do (
+    echo show find entry.json
+    echo %%s
+    set dirJson=%%~dps
+    echo dirJson=!dirJson!
+    set delims1=\
+    echo end find entry.json
+    rem pause
+    rem 找到entry.json，提取其中title对应的键值对
+    for /f "delims=, tokens=4" %%k in (%%s) do (
+            rem 找到entry.json后，得到路径对应的编号id
+            for /f "delims=\ tokens=6,7" %%n in ("!dirJson!") do (
+                set id1=%%n
+    	set id2=%%o
+    	set id=!id1!_!id2!
+    	echo id=!id!
+            )
+            echo **show keyValue
+            echo %%k
+            echo * 222 * end show keyValue
+            rem pause
+            rem 从title对应的键值对中提取title
+            for /f "delims=: tokens=1,2" %%a in (%%k) do (
+                echo * 333 * show get title
+                echo %%a
+                echo %%b
+                set title=%%b
+                set title=!title:~1!
+                echo title=!title!
+                set aa=-
+                rem 取消<的常用功能，进行转义处理
+                set bb=^<
+                set cc=^>
+                set dd=/
+                set ee=\
+                call set "title=%%title:!aa!=%%"
+                call set "title=%%title:!bb!=%%"
+                call set "title=%%title:!cc!=%%"
+                call set "title=%%title:!dd!=%%"
+                call set "title=%%title:!ee!=%%"
+                echo title=!title!
+                echo * 333 * end get title
+                rem pause
+                cd !dirJson!
+   	rem 在找到的entry.json这一级的子目录中查找特定文件
+                for /r ./ %%d in (*.?lv) do (
+	    echo * 444 * set title
+                    echo %%d
+	    set dirFile=%%~dpd
+	    set fileExtensionSrc=%%~xd
+	    set fileExtensionDst=.flv
+	    set fileExtensionBlv=.blv
+ 	    echo dirFile=!dirFile!
+	    echo fileExtensionSrc=!fileExtensionSrc!
+	    echo fileExtensionDst=!fileExtensionDst!
+	    echo fileExtensionBlv=!fileExtensionBlv!
+
+                    set fileName=%%~nd
+                    echo fileName=!fileName!!fileExtensionSrc! ---^>!fileName!!fileExtensionDst!
+	    set fileName=!fileName:~-2!
+	    echo fileName=!fileName!!fileExtensionSrc! ---^>!fileName!!fileExtensionDst!
+	    call set "fileName=%%fileName:_=%%"
+
+	    rem 改文件后缀，特定情况这里就这样改了,blv改为flv；
+	    rem 更一般的方法是，提取文件名和文件后缀，改文件后缀，合成新文件名
+	    rem call set "fileName=%%fileName:blv=flv%%"
+	    rem call set "fileName=%%fileName:llv=flv%%"
+
+	    echo fileName=!fileName!!fileExtensionSrc! ---^>!fileName!!fileExtensionDst!
+	    set fileNameSrc=!fileName!!fileExtensionBlv!
+	    set fileNameDst=!id!_!title!_!fileName!!fileExtensionDst!
+                    echo fileNameSrc=!fileNameSrc!
+                    echo fileNameDst=!fileNameDst!
+                    ren "%%d" "!fileNameSrc!"
+                    echo **** 444 ***** end set title title=!title! ***** 
+	    copy "!dirFile!\!fileNameSrc!" "%cd%\!fileNameDst!"
+                    pause
+                )
+                cd %cd%
+        )
+    )
+)
+pause
+

@@ -1,0 +1,21 @@
+:: 用指定程序，打开指定文件 代码 cmd bat
+
+:: 第一种
+
+@echo off
+set FrontPage=C:\Program Files\Microsoft Office\OFFICE11\FRONTPG.EXE
+set FileHtm=C:\test\BatHome.htm
+start "" "%FrontPage%" "%FileHtm%"
+
+:: 第二种（注意引号）
+
+@echo off
+set file=caj\cajviewer.exe
+set htm=test.pdf
+start %file% %htm%
+
+
+:: 第三种
+
+@echo off
+start caj\cajviewer.exe test.pdf

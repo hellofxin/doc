@@ -1,0 +1,3 @@
+安装好的Ubuntu子系统安装文件路径：
+%localappdata%\lxss
+%localappdata%\lxss\rootfs

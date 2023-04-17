@@ -1,0 +1,138 @@
+复制一个文件到多个文件夹：
+	假设你想要复制一个特定文件到 5 个或者更多的文件夹中，这意味着你需要输入 5 次或者更多的cp命令么？
+	要摆脱这个问题，你可以用 cp 命令与 echo命令、管道、xargs 命令一起使用：
+	# echo /home/aaronkilik/test/ /home/aaronkilik/tmp | xargs -n 1 cp -v /home/aaronkilik/bin/sys_info.sh
+	上面的命令中，目录的路径（dir1、dir2、dir3...dirN）被管道作为输入到 xargs 命令中，含义是：
+	1.-n 1 - 告诉 xargs 命令每个命令行最多使用一个参数，并发送到 cp 命令中。
+	2.cp – 用于复制文件。
+	3.-v– 启用详细模式来显示更多复制细节。
+
+vim:
+	1.进入VIM编辑器
+		VIM编辑器，可以新建文件也可以修改文件，命令为：vim  /usr/local/con.cfg
+		如果这个文件，以前是没有的，则为新建，则下方有提示为新文件，如图。
+		如果文件已存在，则没有提示。
+	2.编辑
+		进入编辑器后，我们先按"I”，即切换到“插入”状态。就可以通过上下左右移动光标，或空格、退格及回车等进行编辑内容了，和WINDOWS是一样的了"
+	3.退出vim
+		当文本编辑结束之后，通常需要退出编辑器。退出编辑器又分为4种情况：保存退出、正常退出、不保存退出及强制退出
+		3.1保存退出：我们要按键盘左上角的"ESC"，留意到了没有？左下角的插入状态不见了，然后这时，我们输入“冒号”，即":"(不需双引号)，在下方会出现冒号，等待输入命令，如图，我输入的是WQ。功能如下。
+			W：write，写入
+			Q：quit，退出
+			再回车，就保存退出了
+		3.2 正常退出
+			再说下正常退出，正常退出有个前提条件是：打开的文本文件在内容上没有被改动过。
+			按了ESC后再输入冒号，在输入命令时，直接输入"q"，
+		3.3 不保存退出
+			先按ESC，再输入冒号，在输入命令时，直接输入"q!"
+		3.4 强制退出
+			先按ESC，再按冒号，在输入命令时，直接输入"!"
+
+查看服务列表代码
+	sudo service --status-all
+
+查看ssh是否启动，有sshd说明已经启动
+	sudo ps -e |grep ssh
+	sudo service ssh start
+
+short and long options 
+	Linux命令的一般格式为 ：
+	$ command  [option]  [paraments]
+	对于选项（option）类型有两种：
+	1）短选项（short option）：由一个连字符和一个字母构成，例如：-a, -s等；
+	2）长选项（long options）：由两个连字符和一些大小写字母组合的单词构成，例如：--size，--help等。
+	通常，一个程序会提供short option和long options两种形式，例如：ls -a，--all。另外，短选项（short option）是可以合并的，例如：-sh表示-s和-h的组合，如果要表示为一个选项需要用长选项--sh。
+	不是所有的Linux命令都遵循以上的规则，例如：
+	find -type d -mindepth 2
+port
+	查看服务默认端口
+	cat /etc/services|grep ssh
+	查看已经连接的服务端口（ESTABLISHED
+　　netstat -a
+	查看所有的服务端口（LISTEN，ESTABLISHED）
+    netstat -ap
+    查看8080端口，则可以结合grep命令：
+    netstat -ap | grep 8080
+
+disk
+    1.
+    接上硬盘,ctrl+alt+t进入终端
+    输入命令sudo fdisk -l 查看硬盘信息
+    一般情况下hda表示你的电脑的硬盘，hdb,就是你的硬盘了(具体的，你自己拔下硬盘查下参数 再插上再查一下，就知道是哪个了）。
+    sudo  mount  ntfs   /dev/sdb   /mnt/sdb
+    解释：   管理员权限    挂载  文本类型   硬盘硬件路径  挂载路径  
+    卸载： sudo umount sdb
+    2.
+	查看块设备
+	lsblk
+	查看硬盘的分区
+	sudo fdisk -l
+	硬盘分区
+	#危险！小心操作。
+	sudo fdisk /dev/sda
+	硬盘格式化
+	#危险！将第一个分区格式化为 ext3 分区, mkfs.reiserfs mkfs.xfs mkfs.vfat
+	sudo mkfs.ext3 /dev/sda1
+	硬盘检查
+	#危险！检查第一个分区，请不要检查已经挂载的分区，否则容易丢失和损坏数据
+	sudo fsck /dev/sda1
+	硬盘坏道检测
+	sudo badblocks -s  -v -c 32 /dev/sdb
+	#得到坏的块后，使用分区工具隔离坏道。
+	分区挂载
+	sudo mount -t 文件系统类型 设备路经 访问路经
+	#常用文件类型如下： iso9660 光驱文件系统, vfat fat/fat32分区, ntfs ntfs分区, smbfs windows网络共享目录, reiserfs、ext3、xfs Linux分区
+	#如果中文名无法显示尝试在最後增加 -o nls=utf8 或 -o iocharset=utf8
+	#如果需要挂载後，普通用户也可以使用，在 -o 的参数後面增加 ,umask=022 如：-o nls=utf8,umask=022
+	分区卸载
+	sudo umount 目录名或设备名
+	只读挂载ntfs分区
+	sudo mount -t ntfs -o nls=utf8,umask=0 /dev/sdb1 /mnt/c
+	可写挂载ntfs分区
+	sudo mount -t ntfs-3g -o locale=zh_CN.utf8,umask=0 /dev/sdb1 /mnt/c
+	挂载fat32分区
+	sudo mount -t vfat -o iocharset=utf8,umask=0 /dev/sda1 /mnt/c
+	挂载共享文件
+	sudo mount -t smbfs -o  username=xxx,password=xxx,iocharset=utf8 //192.168.1.1/share /mnt/share
+	挂载ISO文件
+	sudo mount -t iso9660 -o loop,utf8 xxx.iso /mnt/iso
+	查看IDE硬盘信息
+	sudo hdparm -i /dev/sda
+	查看软raid阵列信息
+	cat /proc/mdstat
+	参看硬raid阵列信息
+	dmesg |grep -i raid
+	cat /proc/scsi/scsi
+	查看SATA硬盘信息
+	sudo hdparm -I /dev/sda
+	或
+	sudo apt-get install blktool
+	sudo blktool /dev/sda id
+	查看硬盘剩余空间
+	df
+	df --help 显示帮助
+	查看目录占用空间
+	du -hs 目录名
+	闪盘没法卸载
+	sync
+	fuser -km /media/闪盘卷标
+	使用文件来增加交换空间
+	#创建一个512M的交换文件 /swapfile
+	sudo dd if=/dev/zero of=/swapfile bs=1M count=512
+	sudo mkswap /swapfile
+	sudo swapon /swapfile
+	#sudo vim /etc/fstab #加到fstab文件中让系统引导时自动启动
+	/swapfile swap swap defaults 0 0
+	查看硬盘当前读写情况
+	# 首先安装 sysstat 包
+	sudo apt-get install sysstat
+	#每2秒刷新一次
+	sudo iostat -x 2
+	测试硬盘的实际写入速度
+	dd if=/dev/zero of=test bs=64k count=512 oflag=dsync
+
+install DDNS
+	reference https://www.dynu.com/DynamicDNS/IPUpdateClient/Linux
+	command: URL='https://www.dynu.com/support/downloadfile/31'; FILE=`mktemp`; wget "$URL" -qO $FILE && sudo dpkg -i $FILE; rm $FILE 
+	Before running the client, be sure to configure the client by modifying the configuration file. You can refer to the sample configuration file at /etc/dynuiuc/dynuiuc.conf.sample.
+	vi /etc/dynuiuc/dynuiuc.conf 

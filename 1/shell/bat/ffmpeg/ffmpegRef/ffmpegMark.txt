@@ -1,0 +1,11 @@
+查看设备：
+	ffmpeg -list_devices true -f dshow -i dummy
+
+FFmpeg编码推送到RTMP服务器：
+	ffmpeg -f dshow -i video="Lenovo EasyCamera":audio="麦克风 (Realtek High Definition Audio)" -vcodec libx264 -acodec copy -preset:v ultrafast -tune:v zerolatency -f flv "rtmp://aitech.com/live/tinywan123"
+
+现在使用RTSP 推流地址到EasyDarwin开源流媒体服务器，使用VLC播放RTSP视频流：
+	ffmpeg -f dshow -i video="Lenovo EasyCamera":audio="麦克风 (Realtek High Definition Audio)" -vcodec libx264 -acodec libvo_aacenc -preset:v ultrafast -tune:v zerolatency -f rtsp rtsp://13313.3123/tinywan123.sdp
+	
+设置帧率为25fps，注意这个要设置在推流地址前面摄像头后面：
+	ffmpeg -f dshow -i video="Lenovo EasyCamera":audio="麦克风 (Realtek High Definition Audio)" -vcodec libx264 -acodec libvo_aacenc -b 1080k -r 25 -preset:v ultrafast -tune:v zerolatency -f rtsp rtsp://127.0.0.1/tinywan123.sdp

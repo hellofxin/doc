@@ -1,0 +1,42 @@
+1
+    批处理中可实现的字符串处理功能有：截取字符串内容、替换字符串特定字段、合并字符串、扩充字符串等功能。
+
+2 截取字符串
+    @echo off
+     Setlocal enabledelayedexpansion
+     set abc=hello world, this string come from bat
+     echo 原字符串为:%abc%
+     echo 截取前5个字符:%abc:~0,5%
+     echo 截取最后5个字符:%abc:~-5%
+     echo 截取第一个到倒数第6个字符:%abc:~1,-5%
+     echo 从第4个字符开始截取5个字符:%abc:~3,5%
+     echo 从倒数第14个字符开始截取5个字符:%abc:~-14,5%
+
+ echo 当前时间是:%time% 即 %time:~0,2%点%time:~3,2%分%time:~6,2%秒%time:~9,2%厘秒
+ pause
+
+3 替换字符串
+  @echo off
+  Setlocal enabledelayedexpansion
+  set aa=伟大的中国！我为你自豪
+  echo 替换前:%aa%
+  echo 替换后:%aa:中国=中华人民共和国%
+  echo aa=%aa%
+  echo %aa%
+  set aa=%aa:中国=中华人民共和国%
+  echo aa=%aa%
+  pause
+
+4 字符串合并
+  echo off
+  Setlocal enabledelayedexpansion
+  set aa=伟大的中国！
+  set bb=我为你自豪
+  echo %aa%%bb%
+  
+  echo aa=%aa%
+  echo bb=%bb%
+  set "aa=%aa%%bb%"
+  echo aa=%aa%
+
+  pause
