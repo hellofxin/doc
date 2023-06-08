@@ -1,0 +1,2018 @@
+##############################################################################
+#                                                                            #
+# IAR dsPIC C/EC++ Compiler V1.30B/W32                 13/Dec/2007  20:41:57 #
+# Copyright 2001-2006 IAR Systems. All rights reserved.                      #
+#                                                                            #
+#    Cpu          =  dsPIC                                                   #
+#    Data model   =  Large                                                   #
+#    Double size  =  32 bits                                                 #
+#                 =                                                          #
+#    Source file  =  probe_com.c                                             #
+#    Command line =  -D__dsPIC33FJ256GP710__ probe_com.c                     #
+#                    -oC:\Micrium\Software\EVALBO~1\MICROC~1\EXPLOR~1\PIC33F #
+#                    ~1\MPLAB_~1\OS-Probe\Output\probe_com.r59               #
+#                    -fC:\Micrium\Software\EvalBoards\Microchip\Explorer16\P #
+#                    IC33FJ256\MPLAB_IAR\OS-Probe\ExtPath.xcl (-I            #
+#                    "C:\Program Files\IAR Systems\Embedded Workbench        #
+#                    3.2\dsPIC\inc\clib" -I "C:\Program Files\IAR            #
+#                    Systems\Embedded Workbench 3.2\dsPIC\inc" -I            #
+#                    C:\Micrium\Software\uC-CPU -I                           #
+#                    C:\Micrium\Software\uC-CPU\Microchip\PIC33FJ256\MPLAB_I #
+#                    AR -I C:\Micrium\Software\uC-LIB -I                     #
+#                    C:\Micrium\Software\uCOS-II\Source -I                   #
+#                    C:\Micrium\Software\uCOS-II\Ports\Microchip\PIC33FJ256\ #
+#                    MPLAB_IAR -I C:\Micrium\Software\uC-Probe\Target\Commun #
+#                    ication\Generic\RS-232\Ports\Microchip\dsPIC33\IAR_iccD #
+#                    SPIC -I C:\Micrium\Software\uC-Probe\Target\Communicati #
+#                    on\Generic\RS-232\Source -I                             #
+#                    C:\Micrium\Software\uC-Probe\Target\Communication\Gener #
+#                    ic\Source -I C:\Micrium\Software\uC-Probe\Target\Plugin #
+#                    s\uCOS-II -I C:\Micrium\Software\EvalBoards\Microchip\E #
+#                    xplorer16\PIC33FJ256\MPLAB_IAR\OS-Probe -I              #
+#                    C:\Micrium\Software\EvalBoards\Microchip\Explorer16\PIC #
+#                    33FJ256\MPLAB_IAR\BSP) -r -e --data_model=l --cpu=0     #
+#                    -lc . -la . -z9 --no_cse --no_unroll --no_inline        #
+#                    --no_code_motion                                        #
+#    List file    =  .\probe_com.lst                                         #
+#    Object file  =  C:\Micrium\Software\EVALBO~1\MICROC~1\EXPLOR~1\PIC33F~1 #
+#                    \MPLAB_~1\OS-Probe\Output\probe_com.r59                 #
+#                                                                            #
+#                                                                            #
+##############################################################################
+
+C:\Micrium\Software\uC-Probe\Target\Communication\Generic\Source\probe_com.c
+      1          /*
+      2          *********************************************************************************************************
+      3          *                                      uC/Probe Communication
+      4          *
+      5          *                           (c) Copyright 2007; Micrium, Inc.; Weston, FL
+      6          *
+      7          *               All rights reserved.  Protected by international copyright laws.
+      8          *               Knowledge of the source code may NOT be used to develop a similar product.
+      9          *               Please help us continue to provide the Embedded community with the finest
+     10          *               software available.  Your honesty is greatly appreciated.
+     11          *********************************************************************************************************
+     12          */
+     13          
+     14          /*
+     15          *********************************************************************************************************
+     16          *
+     17          *                                              uC/Probe
+     18          *
+     19          *                                      Communication: Generic
+     20          *
+     21          * Filename      : probe_com.c
+     22          * Version       : V1.40
+     23          * Programmer(s) : BAN
+     24          * Note(s)       : (1) This file contains code to respond to generic (non protocol-dependent)
+     25          *                     commands received by the target.
+     26          *********************************************************************************************************
+     27          */
+     28          
+     29          /*
+     30          *********************************************************************************************************
+     31          *                                             INCLUDE FILES
+     32          *********************************************************************************************************
+     33          */
+     34          
+     35          #define   PROBE_COM_GLOBALS
+     36          #include  <probe_com.h>
+     37          
+     38          
+     39          /*
+     40          *********************************************************************************************************
+     41          *                                            LOCAL DEFINES
+     42          *********************************************************************************************************
+     43          */
+     44          
+     45          /*
+     46          *********************************************************************************************************
+     47          *                                             DATA FORMATS
+     48          *
+     49          * Note(s):  (1) The first word in all TX data segments is identical:
+     50          *
+     51          *                   (A)  A 2-byte format;
+     52          *                   (B)  A 1-byte status;
+     53          *                   (C)  A 1-byte modifier, currently unused.
+     54          *
+     55          *
+     56          *           (2) The first two bytes in all RX data segments is identical:
+     57          *                   (A)  A 2-byte format;
+     58          *
+     59          *           (3) The following data formats are currently defined:
+     60          *
+     61          *                   (A)  PROBE_COM_FMT_?X_QUERY.  The RX request queries the target about a particular
+     62          *                        setup parameter or capability.
+     63          *
+     64          *                   (B)  PROBE_COM_FMT_?X_SIMPLE_RD.  The RX request instructs the target to send
+     65          *                        data read from its memory, for a certain {memory address, data length} pair
+     66          *                        (which is given in the request).
+     67          *
+     68          *                   (C)  PROBE_COM_FMT_?X_SIMPLE_WR.  The RX request instructs the target to
+     69          *                        write certain data into its memory, for a certain {memory address, data length,
+     70          *                        data} triplet (which is given in the request).
+     71          *
+     72          *                   (D)  PROBE_COM_FMT_?X_MULTIPLE_RD.  The RX request instructs the target to send
+     73          *                        data read from its memory, for a certain set of {memory address, data length}
+     74          *                        pairs (which are given in the request).
+     75          *
+     76          *                   (E)  PROBE_COM_FMT_?X_STR_GET.  The RX request instructs the target to
+     77          *                        return a string that the user has stored in the target's string buffer.
+     78          *
+     79          **********************************************************************************************************
+     80          */
+     81          
+     82          #define  PROBE_COM_FMT_TX_ERROR               0x8000
+     83          
+     84          #define  PROBE_COM_FMT_RX_QUERY               0x0001
+     85          #define  PROBE_COM_FMT_TX_QUERY               0x8001
+     86          
+     87          #define  PROBE_COM_FMT_RX_SIMPLE_RD           0x0002
+     88          #define  PROBE_COM_FMT_TX_SIMPLE_RD           0x8002
+     89          
+     90          #define  PROBE_COM_FMT_RX_SIMPLE_WR           0x0003
+     91          #define  PROBE_COM_FMT_TX_SIMPLE_WR           0x8003
+     92          
+     93          #define  PROBE_COM_FMT_RX_MULTIPLE_RD         0x0007
+     94          #define  PROBE_COM_FMT_TX_MULTIPLE_RD         0x8007
+     95          
+     96          #define  PROBE_COM_FMT_TX_MULTIPLE_RD_LO        0x07
+     97          #define  PROBE_COM_FMT_TX_MULTIPLE_RD_HI        0x80
+     98          
+     99          #define  PROBE_COM_FMT_RX_STR_GET             0x0009
+    100          #define  PROBE_COM_FMT_TX_STR_GET             0x8009
+    101          
+    102          /*
+    103          *********************************************************************************************************
+    104          *                                             STATUS CONSTANTS
+    105          *
+    106          * Note(s):  (1) The following status constants are currently defined:
+    107          *
+    108          *                   (A)  PROBE_COM_STATUS_OK.  The target was able to respond to the command.
+    109          *
+    110          *                   (B)  PROBE_COM_STATUS_STR_NONE.  A PROBE_COM_FMT_RX_STR_GET packet is received,
+    111          *                        but the target has no string to send.
+    112          *
+    113          *                   (C)  PROBE_COM_STATUS_QUERY_NOT_SUPPORTED.  A PROBE_COM_FMT_RX_QUERY packet is
+    114          *                        received, but the query is not supported.
+    115          *
+    116          *                   (D)  PROBE_COM_STATUS_TX_PKT_TOO_LARGE.  The response to the request would be too
+    117          *                        large to fit into the target.
+    118          *
+    119          *                   (E)  PROBE_COM_STATUS_RX_PKT_WRONG_SIZE.  The request packet is not the expected
+    120          *                        size.
+    121          *
+    122          *                   (F)  PROBE_COM_STATUS_FAIL.  Another error occurred.
+    123          *
+    124          **********************************************************************************************************
+    125          */
+    126          
+    127          #define  PROBE_COM_STATUS_OK                    0x01
+    128          #define  PROBE_COM_STATUS_STR_NONE              0xF8
+    129          #define  PROBE_COM_STATUS_UNKNOWN_REQUEST       0xF9
+    130          #define  PROBE_COM_STATUS_QUERY_NOT_SUPPORTED   0xFC
+    131          #define  PROBE_COM_STATUS_TX_PKT_TOO_LARGE      0xFD
+    132          #define  PROBE_COM_STATUS_RX_PKT_WRONG_SIZE     0xFE
+    133          #define  PROBE_COM_STATUS_FAIL                  0xFF
+    134          
+    135          /*
+    136          *********************************************************************************************************
+    137          *                                                QUERIES
+    138          *
+    139          * Note(s):  (1) The following queries are currently defined:
+    140          *
+    141          *                   (A)  PROBE_COM_QUERY_MAX_RX_SIZE.  The target responds with the data size of the
+    142          *                        largest packet it can receive.
+    143          *
+    144          *                   (B)  PROBE_COM_QUERY_MAX_TX_SIZE.  The target responds with the data size of the
+    145          *                        largest packet it can send.
+    146          *
+    147          *                   (C)  PROBE_COM_ENDIANNESS_TEST.  The target responds with a 4-byte data value.  On
+    148          *                        little-endian CPUs, this will be received as 0x12345678; on big-endian CPUs,
+    149          *                        this will be received as 0x87654321.
+    150          *
+    151          *                   (D)  PROBE_COM_QUERY_FMT_SUPPORT.  The target responds with a list of the formats
+    152          *                        the target can respond to.
+    153          *
+    154          **********************************************************************************************************
+    155          */
+    156          
+    157                                                                          /* --------------------- CONFIGURATION -------------------- */
+    158          #define  PROBE_COM_QUERY_MAX_RX_SIZE          0x0101
+    159          #define  PROBE_COM_QUERY_MAX_TX_SIZE          0x0102
+    160          
+    161                                                                          /* ------------------- TARGET PROPERTIES ------------------ */
+    162          #define  PROBE_COM_QUERY_ENDIANNESS_TEST      0x0201
+    163          
+    164                                                                          /* --------------- COMMUNICATION CAPABILITIES ------------- */
+    165          #define  PROBE_COM_QUERY_FMT_SUPPORT          0x1001
+    166          
+    167          /*
+    168          *********************************************************************************************************
+    169          *                                               MODIFIERS
+    170          *
+    171          * Note(s):  (1) The following modifiers are currently defined:
+    172          *
+    173          *                   (A)  PROBE_COM_MODIFIER_NONE.  This is the generic modifier.
+    174          *
+    175          *                   (B)  PROBE_COM_MODIFIER_STR_HAVE.  The target indicates that it has a string to
+    176          *                        transmit.
+    177          *
+    178          **********************************************************************************************************
+    179          */
+    180          
+    181          #define  PROBE_COM_MODIFIER_NONE                0x00
+    182          #define  PROBE_COM_MODIFIER_STR_HAVE            0x01
+    183          
+    184          /*
+    185          *********************************************************************************************************
+    186          *                                               HEADER SIZES
+    187          *
+    188          * Note(s):  (1) Every RX packet has a 2-byte "header".
+    189          *
+    190          *           (2) Every TX packet has a 4-byte "header".
+    191          **********************************************************************************************************
+    192          */
+    193          
+    194          #define  PROBE_COM_SIZE_RX_HEADER                  2
+    195          #define  PROBE_COM_SIZE_TX_HEADER                  4
+    196          
+    197          /*
+    198          *********************************************************************************************************
+    199          *                                           LOCAL CONSTANTS
+    200          *********************************************************************************************************
+    201          */
+    202          
+    203          
+    204          /*
+    205          *********************************************************************************************************
+    206          *                                          LOCAL DATA TYPES
+    207          *********************************************************************************************************
+    208          */
+    209          
+    210          
+    211          /*
+    212          *********************************************************************************************************
+    213          *                                            LOCAL TABLES
+    214          *********************************************************************************************************
+    215          */
+    216          
+    217          
+    218          /*
+    219          *********************************************************************************************************
+    220          *                                       LOCAL GLOBAL VARIABLES
+    221          *********************************************************************************************************
+    222          */
+    223          
+    224          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+    225          static  CPU_INT16U  ProbeComStrBufWrIx;
+    226          static  CPU_INT16U  ProbeComStrBufRdIx;
+    227          static  CPU_CHAR    ProbeComStrBuf[PROBE_COM_STR_BUF_SIZE];
+    228          #endif
+    229          
+    230          static  CPU_INT32U  ProbeComEndiannessTest;
+    231          
+    232          /*
+    233          *********************************************************************************************************
+    234          *                                      LOCAL FUNCTION PROTOTYPES
+    235          *********************************************************************************************************
+    236          */
+    237          
+    238                                                                              /* ---------- PROCESS REQUEST & FORM RESPONSE --------- */
+    239          static  CPU_INT08U  ProbeCom_PktModifier  (void);
+    240          
+    241          static  CPU_INT16U  ProbeCom_CmdError     (CPU_INT08U   *tx_buf,
+    242                                                     CPU_INT08U    com_error);
+    243          
+    244          static  CPU_INT16U  ProbeCom_CmdQuery     (CPU_INT08U   *rx_buf,
+    245                                                     CPU_INT08U   *tx_buf,
+    246                                                     CPU_INT16U    rx_pkt_sz,
+    247                                                     CPU_INT16U    tx_buf_sz);
+    248          
+    249          static  CPU_INT16U  ProbeCom_CmdSimpleRd  (CPU_INT08U   *rx_buf,
+    250                                                     CPU_INT08U   *tx_buf,
+    251                                                     CPU_INT16U    rx_pkt_sz,
+    252                                                     CPU_INT16U    tx_buf_sz);
+    253          
+    254          #if (PROBE_COM_SUPPORT_WR == DEF_TRUE)
+    255          static  CPU_INT16U  ProbeCom_CmdSimpleWr  (CPU_INT08U   *rx_buf,
+    256                                                     CPU_INT08U   *tx_buf,
+    257                                                     CPU_INT16U    rx_pkt_sz,
+    258                                                     CPU_INT16U    tx_buf_sz);
+    259          #endif
+    260          static  CPU_INT16U  ProbeCom_CmdMultipleRd(CPU_INT08U   *rx_buf,
+    261                                                     CPU_INT08U   *tx_buf,
+    262                                                     CPU_INT16U    rx_pkt_sz,
+    263                                                     CPU_INT16U    tx_buf_sz);
+    264          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+    265          static  CPU_INT16U  ProbeCom_CmdStrGet    (CPU_INT08U   *rx_buf,
+    266                                                     CPU_INT08U   *tx_buf,
+    267                                                     CPU_INT16U    rx_pkt_sz,
+    268                                                     CPU_INT16U    tx_buf_sz);
+    269          #endif
+    270          
+    271                                                                              /* ---------------- READ FROM RX PACKET --------------- */
+    272          static  CPU_INT08U  ProbeCom_GetINT8U     (CPU_INT08U  **buf);
+    273          
+    274          static  CPU_INT16U  ProbeCom_GetINT16U    (CPU_INT08U  **buf);
+    275          
+    276          #if ((!defined(CPU_CFG_ADDR_SIZE)) || \
+    277               ((defined(CPU_CFG_ADDR_SIZE)) && \
+    278                        (CPU_CFG_ADDR_SIZE   != CPU_WORD_SIZE_16)))
+    279          static  CPU_INT32U  ProbeCom_GetINT32U    (CPU_INT08U  **buf);
+    280          #endif
+    281          
+    282                                                                              /* ----------------- WRITE TO TX BUFFER --------------- */
+    283          static  void        ProbeCom_StoINT8U     (CPU_INT08U  **buf,
+    284                                                     CPU_INT08U    data);
+    285          
+    286          static  void        ProbeCom_StoINT16U    (CPU_INT08U  **buf,
+    287                                                     CPU_INT16U    data);
+    288          
+    289          #if 0
+    290          static  void        ProbeCom_StoINT32U    (CPU_INT08U  **buf,
+    291                                                     CPU_INT32U    data);
+    292          #endif
+    293          
+    294                                                                              /* ------ DETERMINE IF STRING IS IN STRING BUFFER ----- */
+    295          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+    296          static  CPU_BOOLEAN ProbeCom_StrRdy       (void);
+    297          #endif
+    298          
+    299          
+    300          /*
+    301          *********************************************************************************************************
+    302          *                                     LOCAL CONFIGURATION ERRORS
+    303          *********************************************************************************************************
+    304          */
+    305          
+    306          
+    307          /*
+    308          *********************************************************************************************************
+    309          *********************************************************************************************************
+    310          **                                          Global Functions
+    311          *********************************************************************************************************
+    312          *********************************************************************************************************
+    313          */
+    314          
+    315          /*
+    316          *********************************************************************************************************
+    317          *                                           ProbeCom_Init()
+    318          *
+    319          * Description : Initialize the module.
+    320          *
+    321          * Argument(s) : none.
+    322          *
+    323          * Return(s)   : none.
+    324          *********************************************************************************************************
+    325          */
+    326          
+    327          void  ProbeCom_Init (void)
+    328          {
+    329          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+    330              ProbeComStrBufWrIx = 0;
+    331              ProbeComStrBufRdIx = 0;
+    332          
+    333              ProbeCom_OS_Init();
+    334          #endif
+    335          
+    336          #if (PROBE_COM_STAT_EN == DEF_ENABLED)
+    337              ProbeCom_RxPktCtr     = 0;
+    338              ProbeCom_TxPktCtr     = 0;
+    339              ProbeCom_TxSymByteCtr = 0;
+    340              ProbeCom_TxSymCtr     = 0;
+    341              ProbeCom_ErrPktCtr    = 0;
+    342          
+    343          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+    344              ProbeCom_TxStrCtr     = 0;
+    345          #endif
+    346          #endif
+    347          
+    348              ProbeComEndiannessTest = 0x12345678L;
+    349          }
+    350          
+    351          
+    352          /*
+    353          *********************************************************************************************************
+    354          *                                         ProbeCom_ParseRxPkt()
+    355          *
+    356          * Description : Parse a packet & formulate a response.
+    357          *
+    358          * Argument(s) : rx_pkt      Pointer to the receive  packet buffer
+    359          *
+    360          *               tx_pkt      Pointer to the transmit packet buffer
+    361          *
+    362          *               rx_pkt_sz   Size of the received packet
+    363          *
+    364          *               tx_pkt_sz   Size of the transmit packet buffer
+    365          *
+    366          * Return(s)   : The number of bytes in the data segment of the packet to transmit in response.
+    367          *********************************************************************************************************
+    368          */
+    369          
+    370          CPU_INT16U  ProbeCom_ParseRxPkt (void        *rx_pkt,
+    371                                           void        *tx_pkt,
+    372                                           CPU_INT16U   rx_pkt_sz,
+    373                                           CPU_INT16U   tx_buf_sz)
+    374          {
+    375              CPU_INT16U   tx_buf_wr;
+    376              CPU_INT16U   format;
+    377              CPU_INT08U  *rx_buf;
+    378              CPU_INT08U  *tx_buf;
+    379          
+    380          
+    381              if (rx_pkt_sz < 2) {
+    382                  return (0);
+    383              }
+    384          
+    385              rx_buf  = (CPU_INT08U *)rx_pkt;
+    386              tx_buf  = (CPU_INT08U *)tx_pkt;
+    387              format  = (rx_buf[1] << 8) + rx_buf[0];
+    388              rx_buf += 2;
+    389          
+    390          #if (PROBE_COM_STAT_EN == DEF_ENABLED)
+    391              ProbeCom_RxPktCtr++;
+    392              ProbeCom_TxPktCtr++;
+    393          #endif
+    394          
+    395              switch (format) {
+    396                  case PROBE_COM_FMT_RX_QUERY:
+    397                       tx_buf_wr = ProbeCom_CmdQuery(     rx_buf, tx_buf, rx_pkt_sz, tx_buf_sz);
+    398                       break;
+    399          
+    400                  case PROBE_COM_FMT_RX_SIMPLE_RD:
+    401                       tx_buf_wr = ProbeCom_CmdSimpleRd(  rx_buf, tx_buf, rx_pkt_sz, tx_buf_sz);
+    402                       break;
+    403          
+    404          #if (PROBE_COM_SUPPORT_WR == DEF_TRUE)
+    405                  case PROBE_COM_FMT_RX_SIMPLE_WR:
+    406                       tx_buf_wr = ProbeCom_CmdSimpleWr(  rx_buf, tx_buf, rx_pkt_sz, tx_buf_sz);
+    407                       break;
+    408          #endif
+    409          
+    410                  case PROBE_COM_FMT_RX_MULTIPLE_RD:
+    411                       tx_buf_wr = ProbeCom_CmdMultipleRd(rx_buf, tx_buf,  rx_pkt_sz, tx_buf_sz);
+    412                       break;
+    413          
+    414          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+    415                  case PROBE_COM_FMT_RX_STR_GET:
+    416                       tx_buf_wr = ProbeCom_CmdStrGet(    rx_buf, tx_buf,  rx_pkt_sz, tx_buf_sz);
+    417                       break;
+    418          #endif
+    419          
+    420                  default:
+    421                       tx_buf_wr = ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_UNKNOWN_REQUEST);
+    422                       break;
+    423              }
+    424          
+    425              return (tx_buf_wr);
+    426          }
+    427          
+    428          
+    429          /*
+    430          *********************************************************************************************************
+    431          *                                    ProbeCom_TxStr()
+    432          *
+    433          * Description : Append a string in the string buffer.
+    434          *
+    435          * Argument(s) : s           Pointer to the string to send.
+    436          *
+    437          *               dly         Delay time (in milliseconds).  If this value is zero, then
+    438          *                           the function will return after queueing in the buffer the portion that fits
+    439          *                           immediately.  Otherwise, the function will delay for a certain number of
+    440          *                           milliseconds until the entire string has been queued in the buffer.
+    441          *
+    442          * Return(s)   : DEF_TRUE   if the entire string was queued in the buffer.
+    443          *               DEF_FALSE  if the entire string could not be queued in the buffer.
+    444          *
+    445          * Note(s)     : (1) The string buffer is implemented as a circular buffer.  This function is one of two
+    446          *                   points of access for this buffer, the other being in the task or ISR which forms the .
+    447          *                   tx packets.  Only this function should modify the global current write index
+    448          *                   (ProbeComStrBufWrIx); only the task or ISR which forms the packets should modify the
+    449          *                   global current read index (ProbeComStrBufRdIx).
+    450          *
+    451          *               (2) The global current write index (ProbeComStrBufWrIx) is the index of the next location
+    452          *                   in the buffer to write.  The global current read index (ProbeComStrBufRdIx) is the
+    453          *                   index of the next location in the buffer to read.
+    454          *
+    455          *               (3) The string buffer, an array of PROBE_COM_STR_BUF_SIZE bytes, can only hold
+    456          *                   (PROBE_COM_STR_BUF_SIZE - 1) bytes so that the condition
+    457          *
+    458          *                                        ProbeComStrBufWrIx == ProbeComStrBufRdIx
+    459          *
+    460          *                   will be true if and only if the buffer is empty.  Consequently, this function
+    461          *                   always leaves an empty space in the buffer.
+    462          *
+    463          *               (4) If called from an ISR, dly MUST be 0.
+    464          *********************************************************************************************************
+    465          */
+    466          
+    467          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+    468          CPU_BOOLEAN  ProbeCom_TxStr (CPU_CHAR    *s,
+    469                                       CPU_INT16U   dly)
+    470          {
+    471              CPU_BOOLEAN  ret;
+    472              CPU_INT32U   len;
+    473              CPU_INT16U   wr_ix;
+    474              CPU_INT16U   rd_ix;
+    475              CPU_INT16U   wr_ix_n;
+    476          
+    477              CPU_INT16U   nbytes_free;
+    478              CPU_INT16U   nbytes_wr;
+    479          
+    480          
+    481              if (dly == 0) {
+    482                  ret = ProbeCom_OS_Pend(DEF_FALSE);
+    483              } else {
+    484                  ret = ProbeCom_OS_Pend(DEF_TRUE);
+    485              }
+    486          
+    487              if (ret == DEF_FALSE) {
+    488                  return (DEF_FALSE);
+    489              }
+    490          
+    491              len = (CPU_INT32U)Str_Len(s);                                   /* Determine length of the string (without NULL byte    */
+    492          
+    493              while (DEF_TRUE) {
+    494                  if (len == 0) {                                             /* If entire string has been placed in buffer           */
+    495                      ProbeCom_OS_Post();
+    496                      return (DEF_TRUE);                                      /* ... Return DEF_TRUE to indicate success.             */
+    497                  }
+    498          
+    499                  rd_ix = ProbeComStrBufRdIx;
+    500                  wr_ix = ProbeComStrBufWrIx;
+    501          
+    502                  if (rd_ix > wr_ix) {                                        /* If rd_ix > wr_ix, store string into                  */
+    503                                                                              /*           buffer locations [wr_ix, rd_ix - 1)        */
+    504                      nbytes_free = rd_ix - wr_ix - 1;
+    505          
+    506                  } else {
+    507                      if (rd_ix == 0) {                                       /* If rd_ix <= wr_ix && rd_ix == 0, store string at     */
+    508                                                                              /*           buffer locations [wr_ix, end_ix - 1)       */
+    509                          nbytes_free = PROBE_COM_STR_BUF_SIZE - wr_ix - 1;
+    510          
+    511                      } else {                                                /* If rd_ix <= wr_ix && rd_ix != 0, store string at     */
+    512                                                                              /*           buffer locations [wr_ix, end_ix)           */
+    513          
+    514                          nbytes_free = PROBE_COM_STR_BUF_SIZE - wr_ix;
+    515                      }
+    516                  }
+    517          
+    518                  if (nbytes_free == 0) {                                     /* If the buffer is full                                */
+    519                      if (dly == 0) {                                         /* (a) Return if dly = 0                                */
+    520                          ProbeCom_OS_Post();
+    521                          return (DEF_FALSE);
+    522                      } else {                                                /* (b) Call OS function to delay and continue           */
+    523                          ProbeCom_OS_Dly(dly);
+    524                      }
+    525                  } else {
+    526          
+    527                      if (nbytes_free > len) {                                /* If string is shorter than free space                 */
+    528                          nbytes_wr = len;
+    529                      } else {
+    530                          nbytes_wr = nbytes_free;
+    531                      }
+    532          
+    533                      wr_ix_n = wr_ix + nbytes_wr;                            /* Assign write index after write                       */
+    534          
+    535                      if (wr_ix_n == PROBE_COM_STR_BUF_SIZE) {                /* Wrap buffer index around                             */
+    536                          wr_ix_n = 0;
+    537                      }
+    538          
+    539                                                                              /* Copy string to buffer                                */
+    540                      Mem_Copy((void     *)&ProbeComStrBuf[wr_ix],
+    541                               (void     *)s,
+    542                               (CPU_SIZE_T)nbytes_wr);
+    543          
+    544                      ProbeComStrBufWrIx  = wr_ix_n;                          /* Assign new global write index                        */
+    545                      s                  += nbytes_wr;                        /* Increase string pointer                              */
+    546                      len                -= nbytes_wr;                        /* Decrease string length                               */
+    547                  }
+    548              }
+    549          }
+    550          #endif
+    551          
+    552          
+    553          /*
+    554          *********************************************************************************************************
+    555          *********************************************************************************************************
+    556          **                                  Static String-Handling Function
+    557          *********************************************************************************************************
+    558          *********************************************************************************************************
+    559          */
+    560          
+    561          /*
+    562          *********************************************************************************************************
+    563          *                                            ProbeCom_StrRdy()
+    564          *
+    565          * Description : Check if a string is ready for transmission.
+    566          *
+    567          * Argument(s) : none.
+    568          *
+    569          * Return(s)   : DEF_TRUE   if a  string is in the buffer for transmission.
+    570          *               DEF_FALSE  if no string is in the buffer for transmission.
+    571          *
+    572          * Note(s)     : (1) See Notes for 'ProbeCom_TxStr()'.
+    573          *********************************************************************************************************
+    574          */
+    575          
+    576          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+    577          static  CPU_BOOLEAN  ProbeCom_StrRdy (void)
+    578          {
+    579              CPU_BOOLEAN  rdy;
+    580              CPU_INT16U   wr_ix;
+    581              CPU_INT16U   rd_ix;
+    582          
+    583          
+    584              wr_ix = ProbeComStrBufWrIx;
+    585              rd_ix = ProbeComStrBufRdIx;
+    586          
+    587              if (wr_ix == rd_ix) {
+    588                  rdy = DEF_FALSE;
+    589              } else {
+    590                  rdy = DEF_TRUE;
+    591              }
+    592          
+    593              return (rdy);
+    594          }
+    595          #endif
+    596          
+    597          
+    598          /*
+    599          *********************************************************************************************************
+    600          *********************************************************************************************************
+    601          **                                  Static Packet-Handling Functions
+    602          *********************************************************************************************************
+    603          *********************************************************************************************************
+    604          */
+    605          
+    606          /*
+    607          *********************************************************************************************************
+    608          *                                         ProbeCom_PktModifier()
+    609          *
+    610          * Description : Get packet modfier byte.
+    611          *
+    612          * Argument(s) : none.
+    613          *
+    614          * Return(s)   : The modifier byte.
+    615          *********************************************************************************************************
+    616          */
+    617          
+    618          static  CPU_INT08U  ProbeCom_PktModifier (void)
+    619          {
+    620          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+    621          
+    622              if (ProbeCom_StrRdy() == DEF_TRUE) {
+    623                  return (PROBE_COM_MODIFIER_STR_HAVE);
+    624              } else {
+    625                  return (PROBE_COM_MODIFIER_NONE);
+    626              }
+    627          
+    628          #else
+    629          
+    630              return (PROBE_COM_MODIFIER_NONE);
+    631          
+    632          #endif
+    633          }
+    634          
+    635          
+    636          /*
+    637          *********************************************************************************************************
+    638          *                                       ProbeCom_CmdError()
+    639          *
+    640          * Description : Formulate error response when the target receives a request it cannot handle.
+    641          *
+    642          * Argument(s) : tx_buf       Pointer to the transmit buffer
+    643          *
+    644          *               com_error    Error that occurred
+    645          *
+    646          * Return(s)   : The number of bytes written to the tx buffer.
+    647          *
+    648          * Note(s)     : (1) The TX format:
+    649          *
+    650          *                   (A) A 2-byte format  , indicating the data segment format;                      AND
+    651          *                   (B) A 1-byte constant, PROBE_RS232_OK,   if the location can    be read;        OR
+    652          *                       A 1-byte constant, PROBE_RS232_FAIL, if the location cannot be read.
+    653          *                   (C) A 1-byte modifier.
+    654          *
+    655          *                         +-------------------------+------------+------------+
+    656          *                         |          Format         |   Status   |  Modifier  |
+    657          *                         +-------------------------+------------+------------+
+    658          
+    659          *
+    660          *********************************************************************************************************
+    661          */
+    662          
+    663          static  CPU_INT16U  ProbeCom_CmdError (CPU_INT08U  *tx_buf,
+    664                                                 CPU_INT08U   com_error)
+    665          {
+    666          #if (PROBE_COM_STAT_EN == DEF_ENABLED)
+    667              ProbeCom_ErrPktCtr++;
+    668          #endif
+    669          
+    670              ProbeCom_StoINT16U(&tx_buf, PROBE_COM_FMT_TX_ERROR);            /*  (a) TX packet format                                */
+    671              ProbeCom_StoINT8U( &tx_buf, com_error);                         /*  (b) Target status                                   */
+    672              ProbeCom_StoINT8U( &tx_buf, ProbeCom_PktModifier());            /*  (c) Modifier                                        */
+    673              return (PROBE_COM_SIZE_TX_HEADER);                              /*  (d) Return TX data segment size                     */
+    674                                                                              /*        =  4      (= Tx header size)                  */
+    675          }
+    676          
+    677          
+    678          /*
+    679          *********************************************************************************************************
+    680          *                                       ProbeCom_CmdQuery()
+    681          *
+    682          * Description : Parse the FMT_QUERY command & formulate response.  This command asks the target
+    683          *               about its capabilities, which are returned in response.
+    684          *
+    685          * Argument(s) : rx_buf      Pointer to the receive  buffer
+    686          *
+    687          *               tx_buf      Pointer to the transmit buffer
+    688          *
+    689          *               rx_pkt_sz   Size  of the receive  packet
+    690          *
+    691          *               tx_buf_sz   Size  of the transmit buffer
+    692          *
+    693          * Return(s)   : The number of bytes written to the tx buffer.
+    694          *
+    695          * Note(s)     : (1) The RX format:
+    696          *
+    697          *                   (A) A 2-byte format  , indicating the data segment format;                      AND
+    698          *                   (B) A 2-byte query   , indicating the length of the remaining data.
+    699          *
+    700          *                         +-------------------------+-------------------------+
+    701          *                         |          Format         |          Query          |
+    702          *                         +-------------------------+-------------------------+
+    703          *
+    704          *              (2) The TX format:
+    705          *
+    706          *                   (A) A 2-byte format  , indicating the data segment format;                      AND
+    707          *                   (B) A 1-byte status  , indicating the status after the request;                 AND
+    708          *                   (C) A 1-byte modifier;                                                          AND
+    709          *                   (E) A n-byte answer  , the answer to the query.
+    710          *
+    711          *                         +-------------------------+------------+------------+
+    712          *                         |          Format         |   Status   |  Modifier  |
+    713          *                         +-------------------------+------------+------------+
+    714          *                         |                       Answer                      |
+    715          *                         |                         .                         |
+    716          *                         |                         .                         |
+    717          *                         |                         .                         |
+    718          *                         +---------------------------------------------------+
+    719          *
+    720          *********************************************************************************************************
+    721          */
+    722          
+    723          static  CPU_INT16U  ProbeCom_CmdQuery (CPU_INT08U  *rx_buf,
+    724                                                 CPU_INT08U  *tx_buf,
+    725                                                 CPU_INT16U   rx_pkt_sz,
+    726                                                 CPU_INT16U   tx_buf_sz)
+    727          {
+    728              CPU_INT16U  query;
+    729              CPU_INT16U  nbytes;
+    730          
+    731          
+    732              query  = 0;
+    733              nbytes = 0;
+    734          
+    735              if (rx_pkt_sz == 4) {                                           /* If RX data segment is the expected size              */
+    736                                                                              /*        =  2      (= Rx header size)                  */
+    737                                                                              /*        +  2      (= Query         )                  */
+    738          
+    739                  query = ProbeCom_GetINT16U(&rx_buf);                        /*  (a) Read the query                                  */
+    740          
+    741                  switch (query) {
+    742                      case PROBE_COM_QUERY_MAX_RX_SIZE:
+    743                      case PROBE_COM_QUERY_MAX_TX_SIZE:
+    744                      case PROBE_COM_QUERY_FMT_SUPPORT:
+    745                      case PROBE_COM_QUERY_ENDIANNESS_TEST:
+    746                           break;
+    747          
+    748                      default:
+    749                           return (ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_QUERY_NOT_SUPPORTED));
+    750                  }
+    751          
+    752              } else {                                                        /* If RX data segment is NOT the expected size          */
+    753          
+    754                  return (ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_RX_PKT_WRONG_SIZE));
+    755              }
+    756          
+    757                                                                              /* No error                                             */
+    758              ProbeCom_StoINT16U(&tx_buf, PROBE_COM_FMT_TX_QUERY);            /*  (a) TX packet format                                */
+    759              ProbeCom_StoINT8U( &tx_buf, PROBE_COM_STATUS_OK);               /*  (b) Target status                                   */
+    760              ProbeCom_StoINT8U( &tx_buf, ProbeCom_PktModifier());            /*  (c) Modifier                                        */
+    761          
+    762                                                                              /*  (d) Save TX data segment data                       */
+    763              switch (query) {
+    764          
+    765                  case PROBE_COM_QUERY_MAX_RX_SIZE:
+    766                       ProbeCom_StoINT16U(&tx_buf, PROBE_COM_RX_MAX_SIZE);
+    767                       ProbeCom_StoINT16U(&tx_buf, 0);
+    768                       nbytes  = 4;
+    769                       break;
+    770          
+    771                  case PROBE_COM_QUERY_MAX_TX_SIZE:
+    772                       ProbeCom_StoINT16U(&tx_buf, PROBE_COM_TX_MAX_SIZE);
+    773                       ProbeCom_StoINT16U(&tx_buf, 0);
+    774                       nbytes  = 4;
+    775                       break;
+    776          
+    777                  case PROBE_COM_QUERY_FMT_SUPPORT:
+    778                       ProbeCom_StoINT16U(&tx_buf, PROBE_COM_FMT_RX_QUERY      );
+    779                       ProbeCom_StoINT16U(&tx_buf, PROBE_COM_FMT_RX_SIMPLE_RD  );
+    780                       nbytes  = 4;
+    781          #if (PROBE_COM_SUPPORT_WR == DEF_TRUE)
+    782                       ProbeCom_StoINT16U(&tx_buf, PROBE_COM_FMT_RX_SIMPLE_WR  );
+    783                       nbytes += 2;
+    784          #endif
+    785                       ProbeCom_StoINT16U(&tx_buf, PROBE_COM_FMT_RX_MULTIPLE_RD);
+    786                       nbytes += 2;
+    787          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+    788                       ProbeCom_StoINT16U(&tx_buf, PROBE_COM_FMT_RX_STR_GET);
+    789                       nbytes += 2;
+    790          #endif
+    791                       break;
+    792          
+    793                  case PROBE_COM_QUERY_ENDIANNESS_TEST:
+    794                       ProbeComEndiannessTest = 0x12345678;
+    795                       Mem_Copy((void     *)tx_buf,
+    796                                (void     *)&ProbeComEndiannessTest,
+    797                                (CPU_SIZE_T)4);
+    798                       nbytes  = 4;
+    799                       break;
+    800          
+    801                  default:
+    802                       break;
+    803              }
+    804          
+    805              return ((CPU_INT16U)(nbytes + PROBE_COM_SIZE_TX_HEADER));       /*  (e) Return TX data segment size                     */
+    806                                                                              /*        =  nbytes (= Tx data   size)                  */
+    807                                                                              /*        +  4      (= Tx header size)                  */
+    808          }
+    809          
+    810          
+    811          /*
+    812          *********************************************************************************************************
+    813          *                                       ProbeCom_CmdSimpleRd()
+    814          *
+    815          * Description : Parse the FMT_SIMPLE_RD request & formulate response.  This command causes the target
+    816          *               to send data read from its memory for a certain {memory address, data length} pair (which
+    817          *               is given in the request).
+    818          *
+    819          * Argument(s) : rx_buf      Pointer to the receive  buffer
+    820          *
+    821          *               tx_buf      Pointer to the transmit buffer
+    822          *
+    823          *               rx_pkt_sz   Size  of the receive  packet
+    824          *
+    825          *               tx_buf_sz   Size  of the transmit buffer
+    826          *
+    827          * Return(s)   : The number of bytes written to the tx buffer.
+    828          *
+    829          * Note(s)     : (1) The RX format:
+    830          *
+    831          *                   (A) A 2-byte format  , indicating the data segment format;                      AND
+    832          *                   (B) A 2-byte length  , indicating the number of bytes to read;                  AND
+    833          *                   (C) A 4-byte address , the starting address of the data to read.
+    834          *
+    835          *                         +-------------------------+-------------------------+
+    836          *                         |          Format         |     Number of bytes     |
+    837          *                         +-------------------------+-------------------------+
+    838          *                         |                      Address                      |
+    839          *                         +-------------------------+-------------------------+
+    840          *
+    841          *               (2) The TX format:
+    842          *
+    843          *                   (A) A 2-byte format  , indicating the data segment format;                      AND
+    844          *                   (B) A 1-byte status  , indicating the status after the request;                 AND
+    845          *                   (C) A 1-byte modifier;                                                          AND
+    846          *                   (D) The memory data.
+    847          *
+    848          *                         +-------------------------+------------+------------+
+    849          *                         |          Format         |   Status   |  Modifier  |
+    850          *                         +-------------------------+------------+------------+
+    851          *                         |                        Data                       |
+    852          *                         |                         .                         |
+    853          *                         |                         .                         |
+    854          *                         |                         .                         |
+    855          *                         +---------------------------------------------------+
+    856          *
+    857          *********************************************************************************************************
+    858          */
+    859          
+    860          static  CPU_INT16U  ProbeCom_CmdSimpleRd (CPU_INT08U  *rx_buf,
+    861                                                    CPU_INT08U  *tx_buf,
+    862                                                    CPU_INT16U   rx_pkt_sz,
+    863                                                    CPU_INT16U   tx_buf_sz)
+    864          {
+    865              CPU_ADDR     addr;
+    866              CPU_INT16U   nbytes;
+    867          
+    868          
+    869              addr   = 0;
+    870              nbytes = 0;
+    871          
+    872              if (rx_pkt_sz == 8) {                                           /* If RX data segment is the expected size              */
+    873                                                                              /*        =  2      (= Rx header size )                 */
+    874                                                                              /*        +  2      (= Number of bytes)                 */
+    875                                                                              /*        +  4      (= Address        )                 */
+    876          
+    877                  nbytes = ProbeCom_GetINT16U(&rx_buf);                       /*  (a) Read the number of bytes to return              */
+    878          
+    879          #if ((!defined(CPU_CFG_ADDR_SIZE)) || \
+    880               ((defined(CPU_CFG_ADDR_SIZE)) && \
+    881                        (CPU_CFG_ADDR_SIZE   != CPU_WORD_SIZE_16)))
+    882                  addr   = (CPU_ADDR)ProbeCom_GetINT32U(&rx_buf);             /*  (b) Read the memory address                         */
+    883          #else
+    884                  addr   = (CPU_ADDR)ProbeCom_GetINT16U(&rx_buf);             /*  (b) Read the memory address                         */
+    885          #endif
+    886          
+    887                  if (nbytes + PROBE_COM_SIZE_TX_HEADER > tx_buf_sz) {        /*  (c) If TX packet will NOT fit in buffer             */
+    888                      return (ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_TX_PKT_TOO_LARGE));
+    889                  }
+    890          
+    891              } else {                                                        /* If RX data segment is NOT the expected size          */
+    892          
+    893                  return (ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_RX_PKT_WRONG_SIZE));
+    894              }
+    895          
+    896          #if (PROBE_COM_STAT_EN == DEF_ENABLED)
+    897              ProbeCom_TxSymCtr++;                                            /*  (a) Increment transmit symbol counter               */
+    898              ProbeCom_TxSymByteCtr += nbytes;
+    899          #endif
+    900                                                                              /*  (b) Save TX data segment header                     */
+    901              ProbeCom_StoINT16U(&tx_buf, PROBE_COM_FMT_TX_SIMPLE_RD);        /*          (i) TX packet format                        */
+    902              ProbeCom_StoINT8U( &tx_buf, PROBE_COM_STATUS_OK);               /*         (ii) Target status                           */
+    903              ProbeCom_StoINT8U( &tx_buf, ProbeCom_PktModifier());            /*        (iii) Modifier                                */
+    904          
+    905                                                                              /*  (c) Save TX data segment data                       */
+    906              Mem_Copy((void     *)tx_buf,
+    907                       (void     *)addr,
+    908                       (CPU_SIZE_T)nbytes);
+    909          
+    910              return ((CPU_INT16U)(nbytes + PROBE_COM_SIZE_TX_HEADER));       /*  (d) Return TX data segment size                     */
+    911                                                                              /*        =  nbytes (= Tx data   size)                  */
+    912                                                                              /*        +  4      (= Tx header size)                  */
+    913          }
+    914          
+    915          
+    916          /*
+    917          *********************************************************************************************************
+    918          *                                       ProbeCom_CmdSimpleWr()
+    919          *
+    920          * Description : Parse the FMT_SIMPLE_WR request & formulate response.  This command causes the target
+    921          *               to write certain data into its memroy, for a certain {memory address, data length, data}
+    922          *               triplet (which is given in the request).
+    923          *
+    924          * Argument(s) : rx_buf      Pointer to the receive  buffer
+    925          *
+    926          *               tx_buf      Pointer to the transmit buffer
+    927          *
+    928          *               rx_pkt_sz   Size  of the receive  packet
+    929          *
+    930          *               tx_buf_sz   Size  of the transmit buffer
+    931          *
+    932          * Return(s)   : The number of bytes written to the tx buffer.
+    933          *
+    934          * Note(s)     : (1) The RX format:
+    935          *
+    936          *                   (A) A 2-byte format  , indicating the data segment format;                      AND
+    937          *                   (B) A 2-byte length  , indicating the number of bytes to write;                 AND
+    938          *                   (C) A 4-byte address , the starting address of the data to read;                AND
+    939          *                   (D) The memory data.
+    940          *
+    941          *                         +-------------------------+-------------------------+
+    942          *                         |          Format         |      Number of bytes    |
+    943          *                         +-------------------------+-------------------------+
+    944          *                         |                      Address                      |
+    945          *                         +---------------------------------------------------+
+    946          *                         |                        Data                       |
+    947          *                         |                         .                         |
+    948          *                         |                         .                         |
+    949          *                         |                         .                         |
+    950          *                         +---------------------------------------------------+
+    951          *
+    952          *               (2) The TX format:
+    953          *
+    954          *                   (A) A 2-byte format  , indicating the data segment format;                      AND
+    955          *                   (B) A 1-byte status  , indicating the status after the request;                 AND
+    956          *                   (C) A 1-byte modifier.
+    957          *
+    958          *                         +-------------------------+------------+------------+
+    959          *                         |          Format         |   Status   |  Modifier  |
+    960          *                         +-------------------------+------------+------------+
+    961          *
+    962          *********************************************************************************************************
+    963          */
+    964          
+    965          #if (PROBE_COM_SUPPORT_WR == DEF_TRUE)
+    966          static  CPU_INT16U  ProbeCom_CmdSimpleWr (CPU_INT08U  *rx_buf,
+    967                                                    CPU_INT08U  *tx_buf,
+    968                                                    CPU_INT16U   rx_pkt_sz,
+    969                                                    CPU_INT16U   tx_buf_sz)
+    970          {
+    971              CPU_INT16U   nbytes;
+    972              CPU_ADDR     addr;
+    973          
+    974          
+    975              if (rx_pkt_sz >= 8) {                                           /* If RX data segment is an expected size               */
+    976                                                                              /*        =  2      (= Rx header size )                 */
+    977                                                                              /*        +  2      (= Number of bytes)                 */
+    978                                                                              /*        +  4      (= Address        )                 */
+    979                                                                              /*        +  nbytes (= Data           )                 */
+    980          
+    981                  nbytes = ProbeCom_GetINT16U(&rx_buf);                       /*  (a) Read the number of bytes to write               */
+    982                  addr   = (CPU_ADDR)ProbeCom_GetINT32U(&rx_buf);             /*  (b) Read the memory address                         */
+    983          
+    984                  if (rx_pkt_sz != 8 + nbytes) {                              /*  (c) If RX data segment is NOT expected size         */
+    985          
+    986                      return (ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_RX_PKT_WRONG_SIZE));
+    987                  }
+    988          
+    989              } else {                                                        /* If RX data segment is NOT an expected size           */
+    990          
+    991                  return (ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_RX_PKT_WRONG_SIZE));
+    992              }
+    993          
+    994                                                                              /*  (a) Store data into memory                          */
+    995              Mem_Copy((void     *)addr,
+    996                       (void     *)rx_buf,
+    997                       (CPU_SIZE_T)nbytes);
+    998          
+    999                                                                              /*  (b) Save TX data segment header                     */
+   1000              ProbeCom_StoINT16U(&tx_buf, PROBE_COM_FMT_TX_SIMPLE_RD);        /*          (i) TX packet format                        */
+   1001              ProbeCom_StoINT8U( &tx_buf, PROBE_COM_STATUS_OK);               /*         (ii) Target status                           */
+   1002              ProbeCom_StoINT8U( &tx_buf, ProbeCom_PktModifier());            /*        (iii) Modifier                                */
+   1003          
+   1004              return (PROBE_COM_SIZE_TX_HEADER);                              /*  Return TX data segment size                         */
+   1005                                                                              /*        =  4      (= Tx header size)                  */
+   1006          }
+   1007          #endif
+   1008          
+   1009          
+   1010          /*
+   1011          *********************************************************************************************************
+   1012          *                                       ProbeCom_CmdMultipleRd()
+   1013          *
+   1014          * Description : Parse the FMT_MULTIPLE_RD request & formulate respnse.  This command causes the
+   1015          *               target to write into its memory the data specified in a certain set of {memory address,
+   1016          *               data length, data} triplets (which are given in the request).
+   1017          *
+   1018          * Argument(s) : rx_buf      Pointer to the receive  buffer
+   1019          *
+   1020          *               tx_buf      Pointer to the transmit buffer
+   1021          *
+   1022          *               rx_pkt_sz   Size  of the receive  packet
+   1023          *
+   1024          *               tx_buf_sz   Size  of the transmit buffer
+   1025          *
+   1026          * Return(s)   : The number of bytes written to the tx buffer.
+   1027          *
+   1028          * Note(s)     : (1) The RX format:
+   1029          *
+   1030          *                   (A) A 2-byte format             , indicating the data segment format;           AND
+   1031          *                   (B) A 5-byte item descriptor    , for each item in the list, consisting of:
+   1032          *
+   1033          *                           (I) A 4-byte address    , the starting address of the data to read;     AND
+   1034          *                          (II) A 1-byte length     , indicating the number of bytes to read.
+   1035          *
+   1036          *                         +-------------------------+------------+------------+
+   1037          *                         |          Format         | Num. bytes |         Addr       ---
+   1038          *                         +-------------------------+------------+------------+        |    Item 1
+   1039          *                         ress                                   | Num. bytes |       ---
+   1040          *                         +--------------------------------------+------------+        |
+   1041          *                         |                      Address                      |        |    Item 2
+   1042          *                         +------------+--------------------------------------+       ---
+   1043          *                         | Num. bytes |                                   Addr        |    Item 3
+   1044          *                         +------------+--------------------------------------+        .
+   1045          *                         |                         .                         |        .
+   1046          *                         |                         .                         |        .
+   1047          *                         |                         .                         |        .
+   1048          *                         |                         .                         |        .
+   1049          *                         +--------------------------------------+------------+        .
+   1050          *                         ress                                   | Num. bytes |       ---
+   1051          *                         ---------------------------------------+------------+        |   Item n
+   1052          *                         |                      Address                      |        |
+   1053          *                         +---------------------------------------------------+       ---
+   1054          *
+   1055          *               (2) The TX format:
+   1056          *
+   1057          *                   (A) A 2-byte format  , indicating the data segment format;                      AND
+   1058          *                   (B) A 1-byte status  , indicating the status after the request;                 AND
+   1059          *                   (C) A 1-byte modifier;                                                          AND
+   1060          *                   (D) If the list is available, for each item, the following is sent:
+   1061          *
+   1062          *                           (I) The memory data.
+   1063          *
+   1064          *                         +-------------------------+------------+------------+
+   1065          *                         |          Format         |   Status   |  Modifier  |
+   1066          *                         +-------------------------+------------+------------+       ---
+   1067          *                         |                        Data                       |        |    Item 1
+   1068          *                         |                         .                         |        |
+   1069          *                         |                         .                         |        |
+   1070          *                         |                         .                         |        |
+   1071          *                         +---------------------------------------------------+       ---
+   1072          *                         |                         .                         |        .
+   1073          *                         |                         .                         |        .
+   1074          *                         |                         .                         |        .
+   1075          *                         |                         .                         |        .
+   1076          *                         |                         .                         |        .
+   1077          *                         +---------------------------------------------------+       ---
+   1078          *                         |                        Data                       |        |    Item n
+   1079          *                         |                         .                         |        |
+   1080          *                         |                         .                         |        |
+   1081          *                         |                         .                         |        |
+   1082          *                         +---------------------------------------------------+       ---
+   1083          *
+   1084          *********************************************************************************************************
+   1085          */
+   1086          
+   1087          static  CPU_INT16U  ProbeCom_CmdMultipleRd (CPU_INT08U  *rx_buf,
+   1088                                                      CPU_INT08U  *tx_buf,
+   1089                                                      CPU_INT16U   rx_pkt_sz,
+   1090                                                      CPU_INT16U   tx_buf_sz)
+   1091          {
+   1092              CPU_INT08U  *tx_buf_start;
+   1093              CPU_INT16U   tx_length;
+   1094          
+   1095              CPU_ADDR     addr;
+   1096              CPU_INT16U   nbytes;
+   1097              CPU_INT16U   rx_pkt_ix;
+   1098          
+   1099          #if (PROBE_COM_STAT_EN == DEF_ENABLED)
+   1100              CPU_INT16U   sym_ctr;
+   1101              CPU_INT16U   sym_byte_ctr;
+   1102          #endif
+   1103          
+   1104              tx_buf_start = tx_buf;                                          /* Save beginning of TX buffer in case packet           */
+   1105                                                                              /*  ... ends up being too long.                         */
+   1106              tx_length    = PROBE_COM_SIZE_TX_HEADER;                        /* Initial TX packet length = 4 = size of header        */
+   1107          
+   1108              if (rx_pkt_sz  < 7) {                                           /* If the RX data packet is NOT expected size           */
+   1109                                                                              /*        =  2      (= Rx header size   )               */
+   1110                                                                              /*        +  5      (= 1 item descriptor)               */
+   1111                  return (ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_RX_PKT_WRONG_SIZE));
+   1112              }
+   1113          
+   1114                                                                              /* No error (yet)                                       */
+   1115                                                                              /*  (a) Save TX data segment header                     */
+   1116              tx_buf[0]  = PROBE_COM_FMT_TX_MULTIPLE_RD_LO;                   /*          (i) TX packet format                        */
+   1117              tx_buf[1]  = PROBE_COM_FMT_TX_MULTIPLE_RD_HI;
+   1118              tx_buf[2]  = PROBE_COM_STATUS_OK;                               /*         (ii) Target status                           */
+   1119              tx_buf[3]  = ProbeCom_PktModifier();                            /*        (iii) Modifier                                */
+   1120              tx_buf    += PROBE_COM_SIZE_TX_HEADER;
+   1121          
+   1122              rx_pkt_ix  = 7;                                                 /*  (b) Receive packet index after first item           */
+   1123                                                                              /*        =  2      (= Rx header size   )               */
+   1124                                                                              /*        +  5      (= 1 item descriptor)               */
+   1125          
+   1126          #if (PROBE_COM_STAT_EN == DEF_ENABLED)
+   1127              sym_ctr      = 0;
+   1128              sym_byte_ctr = 0;
+   1129          #endif
+   1130                                                                              /*  (c) Store data for each item                        */
+   1131              while (rx_pkt_ix <= rx_pkt_sz) {
+   1132                  nbytes     =  rx_buf[0];
+   1133          
+   1134          #if ((!defined(CPU_CFG_ADDR_SIZE)) || \
+   1135               ((defined(CPU_CFG_ADDR_SIZE)) && \
+   1136                        (CPU_CFG_ADDR_SIZE   != CPU_WORD_SIZE_16)))
+   1137                  addr       = (rx_buf[4] << 8) + rx_buf[3];
+   1138                  addr       = (addr      << 8) + rx_buf[2];
+   1139                  addr       = (addr      << 8) + rx_buf[1];
+   1140          #else
+   1141                  addr       = (rx_buf[2] << 8) + rx_buf[1];
+   1142          #endif
+   1143          
+   1144                  rx_buf    += 5;
+   1145          
+   1146                  tx_length += nbytes;                                        /*        (iii) Add number of bytes to pkt len.         */
+   1147          
+   1148                  if (tx_length > tx_buf_sz) {                                /*         (iv) Will be too long for TX buffer?         */
+   1149                      tx_buf = tx_buf_start;
+   1150                      return (ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_TX_PKT_TOO_LARGE));
+   1151                  }
+   1152          
+   1153          #if (PROBE_COM_STAT_EN == DEF_ENABLED)
+   1154                  sym_ctr++;                                                  /*          (v) Increment local sym. counter            */
+   1155                  sym_byte_ctr += nbytes;
+   1156          #endif
+   1157                                                                              /*         (vi) Otherwise, save TX data                 */
+   1158                  Mem_Copy((void     *)tx_buf,
+   1159                           (void     *)addr,
+   1160                           (CPU_SIZE_T)nbytes);
+   1161          
+   1162                  tx_buf    += nbytes;
+   1163                  rx_pkt_ix += 5;
+   1164              }
+   1165          
+   1166          #if (PROBE_COM_STAT_EN == DEF_ENABLED)
+   1167                  ProbeCom_TxSymCtr     += sym_ctr;                           /* Increment global sym. counter                        */
+   1168                  ProbeCom_TxSymByteCtr += sym_byte_ctr;
+   1169          #endif
+   1170          
+   1171              return (tx_length);
+   1172          }
+   1173          
+   1174          
+   1175          /*
+   1176          *********************************************************************************************************
+   1177          *                                    ProbeCom_CmdStrGet()
+   1178          *
+   1179          * Description : Parse the FMT_STR_GET command & formulate response.  This command asks the target
+   1180          *               to send a string that it is currently storing.
+   1181          *
+   1182          * Argument(s) : rx_buf      Pointer to the receive  buffer
+   1183          *
+   1184          *               tx_buf      Pointer to the transmit buffer
+   1185          *
+   1186          *               rx_pkt_sz   Size  of the receive  packet
+   1187          *
+   1188          *               tx_buf_sz   Size  of the transmit buffer
+   1189          *
+   1190          * Return(s)   : The number of bytes written to the tx buffer.
+   1191          *
+   1192          * Note(s)     : (1) The RX format:
+   1193          *
+   1194          *                   (A) A 2-byte format  , indicating the data segment format;                      AND
+   1195          *                   (B) A 2-byte padding.
+   1196          *
+   1197          *                         +-------------------------+-------------------------+
+   1198          *                         |          Format         |         Padding         |
+   1199          *                         +-------------------------+-------------------------+
+   1200          *
+   1201          *               (2) The TX format:
+   1202          *
+   1203          *                   (A) A 2-byte format  , indicating the data segment format;                      AND
+   1204          *                   (B) A 1-byte status  , indicating the status after the request;                 AND
+   1205          *                   (C) A 1-byte modifier;                                                          AND
+   1206          *                   (d) A n-byte string  , the string which is stored in the target's buffer.
+   1207          *
+   1208          *                         +-------------------------+------------+------------+
+   1209          *                         |          Format         |   Status   |  Modifier  |
+   1210          *                         +-------------------------+------------+------------+
+   1211          *                         |                       String                      |
+   1212          *                         |                         .                         |
+   1213          *                         |                         .                         |
+   1214          *                         |                         .                         |
+   1215          *                         +---------------------------------------------------+
+   1216          *
+   1217          *               (3) See Notes for 'ProbeCom_TxStr()'.
+   1218          *
+   1219          *               (4) uC/Probe requires that a NULL byte ends the string.  Consequently, if the data
+   1220          *                   section of the TX packet is n bytes long, then only (n - 1) bytes have been read
+   1221          *                   from the string buffer.
+   1222          *********************************************************************************************************
+   1223          */
+   1224          
+   1225          #if (PROBE_COM_SUPPORT_STR == DEF_TRUE)
+   1226          static  CPU_INT16U  ProbeCom_CmdStrGet (CPU_INT08U  *rx_buf,
+   1227                                                  CPU_INT08U  *tx_buf,
+   1228                                                  CPU_INT16U   rx_pkt_sz,
+   1229                                                  CPU_INT16U   tx_buf_sz)
+   1230          {
+   1231              CPU_INT16U  wr_ix;
+   1232              CPU_INT16U  rd_ix;
+   1233              CPU_INT16U  nbytes;
+   1234          
+   1235              CPU_INT16U  nbytes_rd;
+   1236              CPU_INT16U  rd_ix_n;
+   1237              CPU_INT16U  tx_max;
+   1238          
+   1239          
+   1240              wr_ix  = ProbeComStrBufWrIx;
+   1241              rd_ix  = ProbeComStrBufRdIx;
+   1242              nbytes = 0;
+   1243          
+   1244              if (rx_pkt_sz == 4) {                                           /* If RX data segment is the expected size              */
+   1245                                                                              /*        =  2      (= Rx header size)                  */
+   1246                                                                              /*        +  2      (= Padding       )                  */
+   1247          
+   1248                  if (wr_ix == rd_ix) {                                       /*  (a) If there is NO string, then error               */
+   1249                      return (ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_STR_NONE));
+   1250                  }
+   1251          
+   1252              } else {                                                        /* If RX data segment is NOT the expected size          */
+   1253          
+   1254                  return (ProbeCom_CmdError(tx_buf, PROBE_COM_STATUS_RX_PKT_WRONG_SIZE));
+   1255              }
+   1256          
+   1257                                                                              /*  (a) Save TX data segment header                     */
+   1258              ProbeCom_StoINT16U(&tx_buf, PROBE_COM_FMT_TX_STR_GET);          /*          (i) TX packet format                        */
+   1259              ProbeCom_StoINT8U( &tx_buf, PROBE_COM_STATUS_OK);               /*         (ii) Target status                           */
+   1260              ProbeCom_StoINT8U( &tx_buf, 0);                                 /*        (iii) Modifier                                */
+   1261          
+   1262              tx_max  = tx_buf_sz - PROBE_COM_SIZE_TX_HEADER - 1;             /*  ( ) Calculate size of largest tx string.            */
+   1263          
+   1264              if (wr_ix > rd_ix) {                                            /*  (b) If wr_ix > rd_ix                                */
+   1265                                                                              /*  ... Store in pkt the bytes [rd_ix, wr_ix)           */
+   1266          
+   1267                  nbytes_rd = wr_ix - rd_ix;                                  /*          (i) Calculate num. bytes to read            */
+   1268          
+   1269                  if (nbytes_rd >= tx_max) {                                  /*         (ii) If too much to fit in packet            */
+   1270                                                                              /*         .... Store only [rd_ix,rd_ix + tx_buf_sz - 5)*/
+   1271                                                                              /*         .... Where 5 = 1 (NULL byte)                 */
+   1272                                                                              /*                      + 4 (TX header)                 */
+   1273                      nbytes_rd = tx_max;
+   1274                      rd_ix_n   = rd_ix + tx_max;
+   1275          
+   1276                  } else {
+   1277                      rd_ix_n   = wr_ix;
+   1278                  }
+   1279          
+   1280                  nbytes = nbytes_rd;                                         /*        (iii) Store number of bytes read              */
+   1281          
+   1282                                                                              /*         (iv) Read from the string buffer             */
+   1283                  Mem_Copy((void     *)tx_buf,
+   1284                           (void     *)&ProbeComStrBuf[rd_ix],
+   1285                           (CPU_SIZE_T)nbytes_rd);
+   1286          
+   1287                 *(tx_buf + nbytes)  = 0;                                     /*         (vi) Store NULL byte                         */
+   1288          
+   1289              } else {                                                        /*  (c) If wr_ix < rd_ix                                */
+   1290                                                                              /*  ... Store in pkt the bytes [rd_ix, end_ix)          */
+   1291                                                                              /*  ... Then store in pkt the bytes [0, wr_ix)          */
+   1292          
+   1293                  nbytes_rd = PROBE_COM_STR_BUF_SIZE - rd_ix;                 /*          (i) Calculate num. bytes to read            */
+   1294          
+   1295                  if (nbytes_rd >= tx_max) {                                  /*         (ii) If to much to fit in packet             */
+   1296                                                                              /*         .... Store only [rd_ix, rd_ix + tx_buf_sz)   */
+   1297          
+   1298                      nbytes  = tx_max;                                       /*              (A) Store number of bytes read          */
+   1299                      rd_ix_n = rd_ix + tx_max;
+   1300          
+   1301                                                                              /*              (B) Read from string buffer             */
+   1302                      Mem_Copy((void     *)tx_buf,
+   1303                               (void     *)&ProbeComStrBuf[rd_ix],
+   1304                               (CPU_SIZE_T)nbytes);
+   1305          
+   1306                     *(tx_buf + nbytes)  = 0;                                 /*              (C) Store NULL byte                     */
+   1307          
+   1308                  } else {                                                    /*         (iii) If not too much for packet             */
+   1309          
+   1310                                                                              /*               ------- [rd_ix, end_ix) ------         */
+   1311          
+   1312                      nbytes    = nbytes_rd;                                  /*              (A) Store number of bytes read          */
+   1313                      rd_ix_n   = 0;                                          /*              (B) Buffer read ix after read           */
+   1314                                                                              /*              (C) Read from the string buffer         */
+   1315                      Mem_Copy((void     *)tx_buf,
+   1316                               (void     *)&ProbeComStrBuf[rd_ix],
+   1317                               (CPU_SIZE_T)nbytes_rd);
+   1318          
+   1319                      rd_ix     = rd_ix_n;                                    /*              (D) Update local read index             */
+   1320          
+   1321                                                                              /*               --------- [0, wr_ix) ---------         */
+   1322                      tx_buf   += nbytes_rd;
+   1323                      nbytes_rd = wr_ix;                                      /*              (E) Number of bytes to read             */
+   1324          
+   1325                                                                              /*              (F) Too much to fit in packet           */
+   1326                      if (nbytes_rd + nbytes >= tx_max) {
+   1327                          nbytes_rd = tx_max - nbytes;                        /*              ... Store only [0, tx_buf_sz - 5]       */
+   1328                      }
+   1329          
+   1330                      nbytes  += nbytes_rd;                                   /*              (G) Update total num. bytes read        */
+   1331                      rd_ix_n  = rd_ix + nbytes_rd;                           /*              (H) Buffer read ix after read           */
+   1332                                                                              /*              (I) Read from the string buffer         */
+   1333                      Mem_Copy((void     *)tx_buf,
+   1334                               (void     *)&ProbeComStrBuf[rd_ix],
+   1335                               (CPU_SIZE_T)nbytes_rd);
+   1336          
+   1337                     *(tx_buf + nbytes_rd) = 0;                               /*              (J) Store NULL byte                     */
+   1338                  }
+   1339              }
+   1340          
+   1341              ProbeComStrBufRdIx = rd_ix_n;                                   /*  (d) Update global read index                        */
+   1342          
+   1343          #if (PROBE_COM_STAT_EN == DEF_ENABLED)
+   1344              ProbeCom_TxStrCtr += nbytes;
+   1345          #endif
+   1346          
+   1347              return ((CPU_INT16U)(nbytes + PROBE_COM_SIZE_TX_HEADER + 1));   /*  (e) Return TX data segment size                     */
+   1348                                                                              /*        =  nbytes (= String    size)                  */
+   1349                                                                              /*        +  4      (= Tx header size)                  */
+   1350                                                                              /*        +  1      (= NULL byte     )                  */
+   1351          }
+   1352          #endif
+   1353          
+   1354          
+   1355          /*
+   1356          *********************************************************************************************************
+   1357          *********************************************************************************************************
+   1358          **                                    Static Buffer Functions
+   1359          *********************************************************************************************************
+   1360          *********************************************************************************************************
+   1361          */
+   1362          
+   1363          /*
+   1364          *********************************************************************************************************
+   1365          *                                       ProbeCom_GetINT8U()
+   1366          *                                       ProbeCom_GetINT16U()
+   1367          *                                       ProbeCom_GetINT32U()
+   1368          *
+   1369          * Description : Retrieve data from a buffer and increment buffer pointer.
+   1370          *
+   1371          * Argument(s) : buf         The pointer to the buffer pointer.
+   1372          *
+   1373          * Return(s)   : A 8-, 16-, or 32-bit datum, respectively.
+   1374          *********************************************************************************************************
+   1375          */
+   1376          
+   1377          static  CPU_INT08U  ProbeCom_GetINT8U (CPU_INT08U **buf)
+   1378          {
+   1379              return (*((*buf)++));
+   1380          }
+   1381          
+   1382          
+   1383          static  CPU_INT16U  ProbeCom_GetINT16U (CPU_INT08U **buf)
+   1384          {
+   1385              CPU_INT16U  lowbyte;
+   1386              CPU_INT16U  highbyte;
+   1387          
+   1388          
+   1389              lowbyte  = ProbeCom_GetINT8U(buf);
+   1390              highbyte = ProbeCom_GetINT8U(buf);
+   1391              return ((CPU_INT16U)((CPU_INT16U)(highbyte << 8) | (CPU_INT16U)lowbyte));
+   1392          }
+   1393          
+   1394          #if ((!defined(CPU_CFG_ADDR_SIZE)) || \
+   1395               ((defined(CPU_CFG_ADDR_SIZE)) && \
+   1396                        (CPU_CFG_ADDR_SIZE   != CPU_WORD_SIZE_16)))
+   1397          static  CPU_INT32U  ProbeCom_GetINT32U (CPU_INT08U **buf)
+   1398          {
+   1399              CPU_INT32U  highword;
+   1400              CPU_INT32U  lowword;
+   1401          
+   1402          
+   1403              lowword  = ProbeCom_GetINT16U(buf);
+   1404              highword = ProbeCom_GetINT16U(buf);
+   1405              return ((CPU_INT32U)((highword << 16) | lowword));
+   1406          }
+   1407          #endif
+   1408          
+   1409          
+   1410          /*
+   1411          *********************************************************************************************************
+   1412          *                                       ProbeCom_StoINT8U()
+   1413          *                                       ProbeCom_StoINT16U()
+   1414          *                                       ProbeCom_StoINT32U()
+   1415          *
+   1416          * Description : Store data into a buffer and increment the buffer pointer.
+   1417          *
+   1418          * Argument(s) : buf      The pointer to the buffer pointer.
+   1419          *               data     A 8-, 16-, or 32-bit datum, respectively.
+   1420          *
+   1421          * Return(s)   : none.
+   1422          *********************************************************************************************************
+   1423          */
+   1424          
+   1425          static  void  ProbeCom_StoINT8U (CPU_INT08U **buf, CPU_INT08U data)
+   1426          {
+   1427              *((*buf)++) = data;
+   1428          }
+   1429          
+   1430          
+   1431          static  void  ProbeCom_StoINT16U (CPU_INT08U **buf, CPU_INT16U data)
+   1432          {
+   1433              ProbeCom_StoINT8U(buf, (CPU_INT08U)(data & 0x00FF));
+   1434              ProbeCom_StoINT8U(buf, (CPU_INT08U)(data >> 8));
+   1435          }
+   1436          
+   1437          
+   1438          #if 0
+   1439          static  void  ProbeCom_StoINT32U (CPU_INT08U **buf, CPU_INT32U data)
+   1440          {
+   1441              ProbeCom_StoINT16U(buf, (CPU_INT16U)(data & 0x0000FFFFL));
+   1442              ProbeCom_StoINT16U(buf, (CPU_INT16U)(data >> 16));
+   1443          }
+   1444          #endif
+
+   Maximum stack usage in bytes:
+
+     Function                    CSTACK
+     --------                    ------
+     ProbeCom_CmdError              32
+       -> ProbeCom_StoINT16U        12
+       -> ProbeCom_StoINT8U         12
+       -> ProbeCom_PktModifier      12
+       -> ProbeCom_StoINT8U         12
+     ProbeCom_CmdMultipleRd         30
+       -> ProbeCom_CmdError         52
+       -> ProbeCom_PktModifier      52
+       -> ProbeCom_CmdError         52
+       -> Mem_Copy                  52
+     ProbeCom_CmdQuery              16
+       -> ProbeCom_GetINT16U        24
+       -> ProbeCom_StoINT16U        24
+       -> ProbeCom_StoINT8U         24
+       -> ProbeCom_PktModifier      24
+       -> ProbeCom_StoINT8U         24
+       -> ProbeCom_StoINT16U        24
+       -> ProbeCom_StoINT16U        24
+       -> ProbeCom_CmdError         24
+       -> ProbeCom_CmdError         24
+       -> ProbeCom_StoINT16U        24
+       -> ProbeCom_StoINT16U        24
+       -> ProbeCom_StoINT16U        24
+       -> ProbeCom_StoINT16U        24
+       -> ProbeCom_StoINT16U        24
+       -> ProbeCom_StoINT16U        24
+       -> Mem_Copy                  24
+     ProbeCom_CmdSimpleRd           18
+       -> ProbeCom_GetINT16U        28
+       -> ProbeCom_GetINT16U        28
+       -> ProbeCom_CmdError         28
+       -> ProbeCom_StoINT16U        28
+       -> ProbeCom_StoINT8U         28
+       -> ProbeCom_PktModifier      28
+       -> ProbeCom_StoINT8U         28
+       -> Mem_Copy                  28
+       -> ProbeCom_CmdError         28
+     ProbeCom_CmdStrGet             20
+       -> ProbeCom_CmdError         32
+       -> ProbeCom_StoINT16U        32
+       -> ProbeCom_StoINT8U         32
+       -> ProbeCom_StoINT8U         32
+       -> ProbeCom_CmdError         32
+       -> Mem_Copy                  32
+       -> Mem_Copy                  32
+       -> Mem_Copy                  32
+       -> Mem_Copy                  32
+     ProbeCom_GetINT16U             20
+       -> ProbeCom_GetINT8U         12
+       -> ProbeCom_GetINT8U         12
+     ProbeCom_GetINT8U               8
+     ProbeCom_Init                   2
+       -> ProbeCom_OS_Init           0
+     ProbeCom_ParseRxPkt             4
+       -> ProbeCom_CmdQuery          8
+       -> ProbeCom_CmdSimpleRd       8
+       -> ProbeCom_CmdMultipleRd     8
+       -> ProbeCom_CmdStrGet         8
+       -> ProbeCom_CmdError          8
+     ProbeCom_PktModifier           28
+       -> ProbeCom_StrRdy            0
+     ProbeCom_StoINT16U             22
+       -> ProbeCom_StoINT8U         12
+       -> ProbeCom_StoINT8U         12
+     ProbeCom_StoINT8U              18
+     ProbeCom_StrRdy                 2
+     ProbeCom_TxStr                 14
+       -> ProbeCom_OS_Pend          28
+       -> ProbeCom_OS_Pend          28
+       -> Str_Len                   28
+       -> Mem_Copy                  28
+       -> ProbeCom_OS_Post          28
+       -> ProbeCom_OS_Dly           28
+       -> ProbeCom_OS_Post          28
+
+
+   Segment part sizes:
+
+     Function/Label         Bytes
+     --------------         -----
+     WREG0                     2
+     WREG1                     2
+     WREG2                     2
+     WREG3                     2
+     WREG4                     2
+     WREG5                     2
+     WREG6                     2
+     WREG7                     2
+     WREG8                     2
+     WREG9                     2
+     WREG10                    2
+     WREG11                    2
+     WREG12                    2
+     WREG13                    2
+     WREG14                    2
+     WREG15                    2
+     SPLIM                     2
+     ACCAL                     2
+     ACCAH                     2
+     ACCAU                     2
+     ACCBL                     2
+     ACCBH                     2
+     ACCBU                     2
+     PCL                       2
+     DOSTARTL                  2
+     DOENDL                    2
+     XMODSRT                   2
+     XMODEND                   2
+     YMODSRT                   2
+     YMODEND                   2
+     TMR1                      2
+     PR1                       2
+     TMR2                      2
+     TMR3HLD                   2
+     TMR3                      2
+     PR2                       2
+     PR3                       2
+     TMR4                      2
+     TMR5HLD                   2
+     TMR5                      2
+     PR4                       2
+     PR5                       2
+     TMR6                      2
+     TMR7HLD                   2
+     TMR7                      2
+     PR6                       2
+     PR7                       2
+     TMR8                      2
+     TMR9HLD                   2
+     TMR9                      2
+     PR8                       2
+     PR9                       2
+     IC1BUF                    2
+     IC2BUF                    2
+     IC3BUF                    2
+     IC4BUF                    2
+     IC5BUF                    2
+     IC6BUF                    2
+     IC7BUF                    2
+     IC8BUF                    2
+     OC1RS                     2
+     OC1R                      2
+     OC2RS                     2
+     OC2R                      2
+     OC3RS                     2
+     OC3R                      2
+     OC4RS                     2
+     OC4R                      2
+     OC5RS                     2
+     OC5R                      2
+     OC6RS                     2
+     OC6R                      2
+     OC7RS                     2
+     OC7R                      2
+     OC8RS                     2
+     OC8R                      2
+     U1BRG                     2
+     U2BRG                     2
+     SPI1BUF                   2
+     SPI2BUF                   2
+     RXBUF0                    2
+     RXBUF1                    2
+     RXBUF2                    2
+     RXBUF3                    2
+     TXBUF0                    2
+     TXBUF1                    2
+     TXBUF2                    2
+     TXBUF3                    2
+     AD1CSSH                   2
+     DMA0STA                   2
+     DMA0STB                   2
+     DMA0PAD                   2
+     DMA0CNT                   2
+     DMA1STA                   2
+     DMA1STB                   2
+     DMA1PAD                   2
+     DMA1CNT                   2
+     DMA2STA                   2
+     DMA2STB                   2
+     DMA2PAD                   2
+     DMA2CNT                   2
+     DMA3STA                   2
+     DMA3STB                   2
+     DMA3PAD                   2
+     DMA3CNT                   2
+     DMA4STA                   2
+     DMA4STB                   2
+     DMA4PAD                   2
+     DMA4CNT                   2
+     DMA5STA                   2
+     DMA5STB                   2
+     DMA5PAD                   2
+     DMA5CNT                   2
+     DMA6STA                   2
+     DMA6STB                   2
+     DMA6PAD                   2
+     DMA6CNT                   2
+     DMA7STA                   2
+     DMA7STB                   2
+     DMA7PAD                   2
+     DMA7CNT                   2
+     DSADR                     2
+     ProbeCom_RxPktCtr         4
+     ProbeCom_TxPktCtr         4
+     ProbeCom_TxSymCtr         4
+     ProbeCom_TxSymByteCtr     4
+     ProbeCom_ErrPktCtr        4
+     ProbeCom_TxStrCtr         4
+     ProbeComStrBufWrIx        2
+     ProbeComStrBufRdIx        2
+     ProbeComStrBuf           64
+     ProbeComEndiannessTest    4
+     ProbeCom_Init           116
+     ProbeCom_ParseRxPkt     276
+     ProbeCom_TxStr          348
+     ?Subroutine0             16
+     ProbeCom_StrRdy          28
+     ProbeCom_PktModifier     28
+     ProbeCom_CmdError       120
+     ProbeCom_CmdQuery       428
+     ProbeCom_CmdSimpleRd    260
+     ProbeCom_CmdMultipleRd  576
+     ProbeCom_CmdStrGet      604
+     ProbeCom_GetINT8U        84
+     ProbeCom_GetINT16U       56
+     ProbeCom_StoINT8U        96
+     ProbeCom_StoINT16U       52
+     _A_TRISB                  2
+     _A_LATA                   2
+     _A_PORTA                  2
+     _A_TRISA                  2
+     _A_C1RXF5SID              2
+     _A_C1RXF5EID              2
+     _A_C1RXF6SID              2
+     _A_C1RXF6EID              2
+     _A_C1RXF7SID              2
+     _A_C1RXF7EID              2
+     _A_C1RXF8SID              2
+     _A_C1RXF8EID              2
+     _A_RSCON                  2
+     _A_TSCON                  2
+     _A_DCISTAT                2
+     _A_DCICON3                2
+     _A_DCICON2                2
+     _A_DCICON1                2
+     _A_ODCA                   2
+     _A_LATG                   2
+     _A_PORTG                  2
+     _A_TRISG                  2
+     _A_LATF                   2
+     _A_PORTF                  2
+     _A_TRISF                  2
+     _A_LATE                   2
+     _A_PORTE                  2
+     _A_TRISE                  2
+     _A_LATD                   2
+     _A_PORTD                  2
+     _A_TRISD                  2
+     _A_LATC                   2
+     _A_PORTC                  2
+     _A_TRISC                  2
+     _A_LATB                   2
+     _A_PORTB                  2
+     _A_I2C2MSK                2
+     _A_I2C2ADD                2
+     _A_I2C2STAT               2
+     _A_I2C2CON                2
+     _A_I2C2BRG                2
+     _A_I2C2TRN                2
+     _A_I2C2RCV                2
+     _A_I2C1MSK                2
+     _A_I2C1ADD                2
+     _A_I2C1STAT               2
+     _A_I2C1CON                2
+     _A_I2C1BRG                2
+     _A_I2C1TRN                2
+     _A_I2C1RCV                2
+     _A_OC8CON                 2
+     _A_C1RXF11SID             2
+     _A_C1RXF11EID             2
+     _A_OC7CON                 2
+     _A_C1RXF9SID              2
+     _A_SPI2CON2               2
+     _A_SPI2CON1               2
+     _A_SPI2STAT               2
+     _A_C1RXF9EID              2
+     _A_SPI1CON2               2
+     _A_SPI1CON1               2
+     _A_SPI1STAT               2
+     _A_C1RXF10SID             2
+     _A_U2RXREG                2
+     _A_U2TXREG                2
+     _A_U2STA                  2
+     _A_U2MODE                 2
+     _A_C1RXF10EID             2
+     _A_U1RXREG                2
+     _A_U1TXREG                2
+     _A_U1STA                  2
+     _A_U1MODE                 2
+     _A_C1RXFUL1               2
+     _A_DMA5REQ                2
+     _A_DMA5CON                2
+     _A_C1RXFUL2               2
+     _A_C1BUFPNT3              2
+     _A_C1BUFPNT4              2
+     _A_C1RXOVF1               2
+     _A_DMA4REQ                2
+     _A_DMA4CON                2
+     _A_C1RXOVF2               2
+     _A_C1TR01CON              2
+     _A_C1TR23CON              2
+     _A_C1TR45CON              2
+     _A_DMA3REQ                2
+     _A_DMA3CON                2
+     _A_C1TR67CON              2
+     _A_C1RXM2SID              2
+     _A_C1RXM2EID              2
+     _A_C1CTRL1                2
+     _A_DMACS1                 2
+     _A_DMACS0                 2
+     _A_C1CTRL2                2
+     _A_C1VEC                  2
+     _A_C1FCTRL                2
+     _A_C1FIFO                 2
+     _A_DMA7REQ                2
+     _A_DMA7CON                2
+     _A_C1INTF                 2
+     _A_C1INTE                 2
+     _A_C1CFG1                 2
+     _A_C1CFG2                 2
+     _A_DMA6REQ                2
+     _A_DMA6CON                2
+     _A_C1FEN1                 2
+     _A_C1FMSKSEL1             2
+     _A_C1FMSKSEL2             2
+     _A_AD2CHS0                2
+     _A_AD2CHS123              2
+     _A_AD2CON3                2
+     _A_AD2CON2                2
+     _A_AD2CON1                2
+     _A_AD2BUF0                2
+     _A_AD1CON4                2
+     _A_AD1CSSL                2
+     _A_C1RXF4EID              2
+     _A_AD1PCFGL               2
+     _A_AD1PCFGH               2
+     _A_AD1CHS0                2
+     _A_AD1CHS123              2
+     _A_AD1CON3                2
+     _A_AD1CON2                2
+     _A_AD1CON1                2
+     _A_AD1BUF0                2
+     _A_ODCF                   2
+     _A_C1RXF0SID              2
+     _A_DMA2REQ                2
+     _A_DMA2CON                2
+     _A_C1RXF0EID              2
+     _A_C1RXF1SID              2
+     _A_C1RXF1EID              2
+     _A_C1RXF2SID              2
+     _A_DMA1REQ                2
+     _A_DMA1CON                2
+     _A_C1RXF2EID              2
+     _A_C1RXF3SID              2
+     _A_C1RXF3EID              2
+     _A_C1RXF4SID              2
+     _A_DMA0REQ                2
+     _A_DMA0CON                2
+     _A_AD2CON4                2
+     _A_AD2CSSL                2
+     _A_AD2PCFG                2
+     _A_IEC0                   2
+     _A_IFS4                   2
+     _A_IFS3                   2
+     _A_IFS2                   2
+     _A_IFS1                   2
+     _A_IFS0                   2
+     _A_INTCON2                2
+     _A_INTCON1                2
+     _A_CNPU2                  2
+     _A_CNPU1                  2
+     _A_CNEN2                  2
+     _A_CNEN1                  2
+     _A_DISICNT                2
+     _A_XBREV                  2
+     _A_C2RXF6SID              2
+     _A_C2RXF6EID              2
+     _A_C2RXF7SID              2
+     _A_C2RXF7EID              2
+     _A_IPC13                  2
+     _A_IPC12                  2
+     _A_IPC11                  2
+     _A_IPC10                  2
+     _A_IPC9                   2
+     _A_IPC8                   2
+     _A_IPC7                   2
+     _A_IPC6                   2
+     _A_IPC5                   2
+     _A_IPC4                   2
+     _A_IPC3                   2
+     _A_IPC2                   2
+     _A_IPC1                   2
+     _A_IPC0                   2
+     _A_IEC4                   2
+     _A_IEC3                   2
+     _A_IEC2                   2
+     _A_IEC1                   2
+     _A_C2RXF12SID             2
+     _A_C2RXF12EID             2
+     _A_C2RXF13SID             2
+     _A_C2RXF13EID             2
+     _A_C2RXF14SID             2
+     _A_C2RXF14EID             2
+     _A_C2RXF15SID             2
+     _A_C2RXF15EID             2
+     _A_RCON                   2
+     _A_OSCCON                 2
+     _A_CLKDIV                 2
+     _A_PLLFBD                 2
+     _A_OSCTUN                 2
+     _A_NVMCON                 2
+     _A_NVMKEY                 2
+     _A_PMD1                   2
+     _A_PMD2                   2
+     _A_PMD3                   2
+     _A_MODCON                 2
+     _A_CORCON                 2
+     _A_SR                     2
+     _A_DOENDH                 2
+     _A_C2RXF8SID              2
+     _A_DOSTARTH               2
+     _A_C2RXF8EID              2
+     _A_DCOUNT                 2
+     _A_RCOUNT                 2
+     _A_PSVPAG                 2
+     _A_TBLPAG                 2
+     _A_PCH                    2
+     _A_C2RXF9SID              2
+     _A_C2RXF9EID              2
+     _A_C2RXF10SID             2
+     _A_C2RXF10EID             2
+     _A_C2RXF11SID             2
+     _A_C2RXF11EID             2
+     _A_C2FIFO                 2
+     _A_C2INTF                 2
+     _A_IC8CON                 2
+     _A_C2INTE                 2
+     _A_IC7CON                 2
+     _A_C2CFG1                 2
+     _A_IC6CON                 2
+     _A_C2CFG2                 2
+     _A_IC5CON                 2
+     _A_C2FEN1                 2
+     _A_IC4CON                 2
+     _A_C2FMSKSEL1             2
+     _A_IC3CON                 2
+     _A_C2FMSKSEL2             2
+     _A_IC2CON                 2
+     _A_C2RXFUL1               2
+     _A_IC1CON                 2
+     _A_C2RXFUL2               2
+     _A_C1RXF12SID             2
+     _A_C1RXF12EID             2
+     _A_OC6CON                 2
+     _A_C1RXF13SID             2
+     _A_C1RXF13EID             2
+     _A_OC5CON                 2
+     _A_C1RXF14SID             2
+     _A_C1RXF14EID             2
+     _A_OC4CON                 2
+     _A_C1RXF15SID             2
+     _A_C1RXF15EID             2
+     _A_OC3CON                 2
+     _A_C2CTRL1                2
+     _A_C2CTRL2                2
+     _A_OC2CON                 2
+     _A_C2VEC                  2
+     _A_C2FCTRL                2
+     _A_OC1CON                 2
+     _A_C2RXF1SID              2
+     _A_C2RXF1EID              2
+     _A_C2RXF2SID              2
+     _A_T3CON                  2
+     _A_T2CON                  2
+     _A_C2RXF2EID              2
+     _A_C2RXF3SID              2
+     _A_C2RXF3EID              2
+     _A_C2RXF4SID              2
+     _A_C2RXF4EID              2
+     _A_T1CON                  2
+     _A_C2RXF5SID              2
+     _A_C2RXF5EID              2
+     _A_INTREG                 2
+     _A_IPC17                  2
+     _A_IPC16                  2
+     _A_IPC15                  2
+     _A_IPC14                  2
+     _A_T9CON                  2
+     _A_T8CON                  2
+     _A_C2BUFPNT3              2
+     _A_C2BUFPNT4              2
+     _A_C2RXOVF1               2
+     _A_C2RXOVF2               2
+     _A_C2TR01CON              2
+     _A_T7CON                  2
+     _A_T6CON                  2
+     _A_C2TR23CON              2
+     _A_C2TR45CON              2
+     _A_C2TR67CON              2
+     _A_C2RXM2SID              2
+     _A_C2RXM2EID              2
+     _A_T5CON                  2
+     _A_T4CON                  2
+     _A_C2RXF0SID              2
+     _A_C2RXF0EID              2
+
+ 
+ 1 544 words in segment CODE
+    96 bytes in segment MEM_Z
+   820 bytes in segment SFR_A
+ 
+ 1 544 words of CODE memory
+    96 bytes of DATA memory (+ 820 bytes shared)
+
+Errors: none
+Warnings: none

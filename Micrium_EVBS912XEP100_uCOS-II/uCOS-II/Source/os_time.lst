@@ -1,0 +1,757 @@
+##############################################################################
+#                                                                            #
+# IAR dsPIC C/EC++ Compiler V1.30B/W32                 13/Dec/2007  20:41:38 #
+# Copyright 2001-2006 IAR Systems. All rights reserved.                      #
+#                                                                            #
+#    Cpu          =  dsPIC                                                   #
+#    Data model   =  Large                                                   #
+#    Double size  =  32 bits                                                 #
+#                 =                                                          #
+#    Source file  =  os_time.c                                               #
+#    Command line =  -D__dsPIC33FJ256GP710__ os_time.c                       #
+#                    -oC:\Micrium\Software\EVALBO~1\MICROC~1\EXPLOR~1\PIC33F #
+#                    ~1\MPLAB_~1\OS-Probe\Output\os_time.r59                 #
+#                    -fC:\Micrium\Software\EvalBoards\Microchip\Explorer16\P #
+#                    IC33FJ256\MPLAB_IAR\OS-Probe\ExtPath.xcl (-I            #
+#                    "C:\Program Files\IAR Systems\Embedded Workbench        #
+#                    3.2\dsPIC\inc\clib" -I "C:\Program Files\IAR            #
+#                    Systems\Embedded Workbench 3.2\dsPIC\inc" -I            #
+#                    C:\Micrium\Software\uC-CPU -I                           #
+#                    C:\Micrium\Software\uC-CPU\Microchip\PIC33FJ256\MPLAB_I #
+#                    AR -I C:\Micrium\Software\uC-LIB -I                     #
+#                    C:\Micrium\Software\uCOS-II\Source -I                   #
+#                    C:\Micrium\Software\uCOS-II\Ports\Microchip\PIC33FJ256\ #
+#                    MPLAB_IAR -I C:\Micrium\Software\uC-Probe\Target\Commun #
+#                    ication\Generic\RS-232\Ports\Microchip\dsPIC33\IAR_iccD #
+#                    SPIC -I C:\Micrium\Software\uC-Probe\Target\Communicati #
+#                    on\Generic\RS-232\Source -I                             #
+#                    C:\Micrium\Software\uC-Probe\Target\Communication\Gener #
+#                    ic\Source -I C:\Micrium\Software\uC-Probe\Target\Plugin #
+#                    s\uCOS-II -I C:\Micrium\Software\EvalBoards\Microchip\E #
+#                    xplorer16\PIC33FJ256\MPLAB_IAR\OS-Probe -I              #
+#                    C:\Micrium\Software\EvalBoards\Microchip\Explorer16\PIC #
+#                    33FJ256\MPLAB_IAR\BSP) -r -e --data_model=l --cpu=0     #
+#                    -lc . -la . -z9 --no_cse --no_unroll --no_inline        #
+#                    --no_code_motion                                        #
+#    List file    =  .\os_time.lst                                           #
+#    Object file  =  C:\Micrium\Software\EVALBO~1\MICROC~1\EXPLOR~1\PIC33F~1 #
+#                    \MPLAB_~1\OS-Probe\Output\os_time.r59                   #
+#                                                                            #
+#                                                                            #
+##############################################################################
+
+C:\Micrium\Software\uCOS-II\Source\os_time.c
+      1          /*
+      2          *********************************************************************************************************
+      3          *                                                uC/OS-II
+      4          *                                          The Real-Time Kernel
+      5          *                                             TIME MANAGEMENT
+      6          *
+      7          *                              (c) Copyright 1992-2007, Micrium, Weston, FL
+      8          *                                           All Rights Reserved
+      9          *
+     10          * File    : OS_TIME.C
+     11          * By      : Jean J. Labrosse
+     12          * Version : V2.86
+     13          *
+     14          * LICENSING TERMS:
+     15          * ---------------
+     16          *   uC/OS-II is provided in source form for FREE evaluation, for educational use or for peaceful research.  
+     17          * If you plan on using  uC/OS-II  in a commercial product you need to contact Micriµm to properly license 
+     18          * its use in your product. We provide ALL the source code for your convenience and to help you experience 
+     19          * uC/OS-II.   The fact that the  source is provided does  NOT  mean that you can use it without  paying a 
+     20          * licensing fee.
+     21          *********************************************************************************************************
+     22          */
+     23          
+     24          #ifndef  OS_MASTER_FILE
+     25          #include <ucos_ii.h>
+     26          #endif
+     27          
+     28          /*
+     29          *********************************************************************************************************
+     30          *                                DELAY TASK 'n' TICKS   (n from 0 to 65535)
+     31          *
+     32          * Description: This function is called to delay execution of the currently running task until the
+     33          *              specified number of system ticks expires.  This, of course, directly equates to delaying
+     34          *              the current task for some time to expire.  No delay will result If the specified delay is
+     35          *              0.  If the specified delay is greater than 0 then, a context switch will result.
+     36          *
+     37          * Arguments  : ticks     is the time delay that the task will be suspended in number of clock 'ticks'.
+     38          *                        Note that by specifying 0, the task will not be delayed.
+     39          *
+     40          * Returns    : none
+     41          *********************************************************************************************************
+     42          */
+     43          
+     44          void  OSTimeDly (INT16U ticks)
+     45          {
+     46              INT8U      y;
+     47          #if OS_CRITICAL_METHOD == 3                      /* Allocate storage for CPU status register           */
+     48              OS_CPU_SR  cpu_sr = 0;
+     49          #endif
+     50          
+     51          
+     52          
+     53              if (OSIntNesting > 0) {                      /* See if trying to call from an ISR                  */
+     54                  return;
+     55              }
+     56              if (ticks > 0) {                             /* 0 means no delay!                                  */
+     57                  OS_ENTER_CRITICAL();
+     58                  y            =  OSTCBCur->OSTCBY;        /* Delay current task                                 */
+     59                  OSRdyTbl[y] &= ~OSTCBCur->OSTCBBitX;
+     60                  if (OSRdyTbl[y] == 0) {
+     61                      OSRdyGrp &= ~OSTCBCur->OSTCBBitY;
+     62                  }
+     63                  OSTCBCur->OSTCBDly = ticks;              /* Load ticks in TCB                                  */
+     64                  OS_EXIT_CRITICAL();
+     65                  OS_Sched();                              /* Find next task to run!                             */
+     66              }
+     67          }
+     68          /*$PAGE*/
+     69          /*
+     70          *********************************************************************************************************
+     71          *                                     DELAY TASK FOR SPECIFIED TIME
+     72          *
+     73          * Description: This function is called to delay execution of the currently running task until some time
+     74          *              expires.  This call allows you to specify the delay time in HOURS, MINUTES, SECONDS and
+     75          *              MILLISECONDS instead of ticks.
+     76          *
+     77          * Arguments  : hours     specifies the number of hours that the task will be delayed (max. is 255)
+     78          *              minutes   specifies the number of minutes (max. 59)
+     79          *              seconds   specifies the number of seconds (max. 59)
+     80          *              milli     specifies the number of milliseconds (max. 999)
+     81          *
+     82          * Returns    : OS_ERR_NONE
+     83          *              OS_ERR_TIME_INVALID_MINUTES
+     84          *              OS_ERR_TIME_INVALID_SECONDS
+     85          *              OS_ERR_TIME_INVALID_MS
+     86          *              OS_ERR_TIME_ZERO_DLY
+     87          *              OS_ERR_TIME_DLY_ISR
+     88          *
+     89          * Note(s)    : The resolution on the milliseconds depends on the tick rate.  For example, you can't do
+     90          *              a 10 mS delay if the ticker interrupts every 100 mS.  In this case, the delay would be
+     91          *              set to 0.  The actual delay is rounded to the nearest tick.
+     92          *********************************************************************************************************
+     93          */
+     94          
+     95          #if OS_TIME_DLY_HMSM_EN > 0
+     96          INT8U  OSTimeDlyHMSM (INT8U hours, INT8U minutes, INT8U seconds, INT16U ms)
+     97          {
+     98              INT32U ticks;
+     99              INT16U loops;
+    100          
+    101          
+    102              if (OSIntNesting > 0) {                      /* See if trying to call from an ISR                  */
+    103                  return (OS_ERR_TIME_DLY_ISR);
+    104              }
+    105          #if OS_ARG_CHK_EN > 0
+    106              if (hours == 0) {
+    107                  if (minutes == 0) {
+    108                      if (seconds == 0) {
+    109                          if (ms == 0) {
+    110                              return (OS_ERR_TIME_ZERO_DLY);
+    111                          }
+    112                      }
+    113                  }
+    114              }
+    115              if (minutes > 59) {
+    116                  return (OS_ERR_TIME_INVALID_MINUTES);    /* Validate arguments to be within range              */
+    117              }
+    118              if (seconds > 59) {
+    119                  return (OS_ERR_TIME_INVALID_SECONDS);
+    120              }
+    121              if (ms > 999) {
+    122                  return (OS_ERR_TIME_INVALID_MS);
+    123              }
+    124          #endif
+    125                                                           /* Compute the total number of clock ticks required.. */
+    126                                                           /* .. (rounded to the nearest tick)                   */
+    127              ticks = ((INT32U)hours * 3600L + (INT32U)minutes * 60L + (INT32U)seconds) * OS_TICKS_PER_SEC
+    128                    + OS_TICKS_PER_SEC * ((INT32U)ms + 500L / OS_TICKS_PER_SEC) / 1000L;
+    129              loops = (INT16U)(ticks >> 16);               /* Compute the integral number of 65536 tick delays   */
+    130              ticks = ticks & 0xFFFFL;                     /* Obtain  the fractional number of ticks             */
+    131              OSTimeDly((INT16U)ticks);
+    132              while (loops > 0) {
+    133                  OSTimeDly((INT16U)32768u);
+    134                  OSTimeDly((INT16U)32768u);
+    135                  loops--;
+    136              }
+    137              return (OS_ERR_NONE);
+    138          }
+    139          #endif
+    140          /*$PAGE*/
+    141          /*
+    142          *********************************************************************************************************
+    143          *                                         RESUME A DELAYED TASK
+    144          *
+    145          * Description: This function is used resume a task that has been delayed through a call to either
+    146          *              OSTimeDly() or OSTimeDlyHMSM().  Note that you can call this function to resume a
+    147          *              task that is waiting for an event with timeout.  This would make the task look
+    148          *              like a timeout occurred.
+    149          *
+    150          *              Also, you cannot resume a task that has called OSTimeDlyHMSM() with a combined time that
+    151          *              exceeds 65535 clock ticks.  In other words, if the clock tick runs at 100 Hz then, you will
+    152          *              not be able to resume a delayed task that called OSTimeDlyHMSM(0, 10, 55, 350) or higher:
+    153          *
+    154          *                  (10 Minutes * 60 + 55 Seconds + 0.35) * 100 ticks/second.
+    155          *
+    156          * Arguments  : prio                      specifies the priority of the task to resume
+    157          *
+    158          * Returns    : OS_ERR_NONE               Task has been resumed
+    159          *              OS_ERR_PRIO_INVALID       if the priority you specify is higher that the maximum allowed
+    160          *                                        (i.e. >= OS_LOWEST_PRIO)
+    161          *              OS_ERR_TIME_NOT_DLY       Task is not waiting for time to expire
+    162          *              OS_ERR_TASK_NOT_EXIST     The desired task has not been created or has been assigned to a Mutex.
+    163          *********************************************************************************************************
+    164          */
+    165          
+    166          #if OS_TIME_DLY_RESUME_EN > 0
+    167          INT8U  OSTimeDlyResume (INT8U prio)
+    168          {
+    169              OS_TCB    *ptcb;
+    170          #if OS_CRITICAL_METHOD == 3                                    /* Storage for CPU status register      */
+    171              OS_CPU_SR  cpu_sr = 0;
+    172          #endif
+    173          
+    174          
+    175          
+    176              if (prio >= OS_LOWEST_PRIO) {
+    177                  return (OS_ERR_PRIO_INVALID);
+    178              }
+    179              OS_ENTER_CRITICAL();
+    180              ptcb = OSTCBPrioTbl[prio];                                 /* Make sure that task exist            */
+    181              if (ptcb == (OS_TCB *)0) {
+    182                  OS_EXIT_CRITICAL();
+    183                  return (OS_ERR_TASK_NOT_EXIST);                        /* The task does not exist              */
+    184              }
+    185              if (ptcb == OS_TCB_RESERVED) {
+    186                  OS_EXIT_CRITICAL();
+    187                  return (OS_ERR_TASK_NOT_EXIST);                        /* The task does not exist              */
+    188              }
+    189              if (ptcb->OSTCBDly == 0) {                                 /* See if task is delayed               */
+    190                  OS_EXIT_CRITICAL();
+    191                  return (OS_ERR_TIME_NOT_DLY);                          /* Indicate that task was not delayed   */
+    192              }
+    193          
+    194              ptcb->OSTCBDly = 0;                                        /* Clear the time delay                 */
+    195              if ((ptcb->OSTCBStat & OS_STAT_PEND_ANY) != OS_STAT_RDY) {
+    196                  ptcb->OSTCBStat     &= ~OS_STAT_PEND_ANY;              /* Yes, Clear status flag               */
+    197                  ptcb->OSTCBStatPend  =  OS_STAT_PEND_TO;               /* Indicate PEND timeout                */
+    198              } else {
+    199                  ptcb->OSTCBStatPend  =  OS_STAT_PEND_OK;
+    200              }
+    201              if ((ptcb->OSTCBStat & OS_STAT_SUSPEND) == OS_STAT_RDY) {  /* Is task suspended?                   */
+    202                  OSRdyGrp               |= ptcb->OSTCBBitY;             /* No,  Make ready                      */
+    203                  OSRdyTbl[ptcb->OSTCBY] |= ptcb->OSTCBBitX;
+    204                  OS_EXIT_CRITICAL();
+    205                  OS_Sched();                                            /* See if this is new highest priority  */
+    206              } else {
+    207                  OS_EXIT_CRITICAL();                                    /* Task may be suspended                */
+    208              }
+    209              return (OS_ERR_NONE);
+    210          }
+    211          #endif
+    212          /*$PAGE*/
+    213          /*
+    214          *********************************************************************************************************
+    215          *                                         GET CURRENT SYSTEM TIME
+    216          *
+    217          * Description: This function is used by your application to obtain the current value of the 32-bit
+    218          *              counter which keeps track of the number of clock ticks.
+    219          *
+    220          * Arguments  : none
+    221          *
+    222          * Returns    : The current value of OSTime
+    223          *********************************************************************************************************
+    224          */
+    225          
+    226          #if OS_TIME_GET_SET_EN > 0
+    227          INT32U  OSTimeGet (void)
+    228          {
+    229              INT32U     ticks;
+    230          #if OS_CRITICAL_METHOD == 3                      /* Allocate storage for CPU status register           */
+    231              OS_CPU_SR  cpu_sr = 0;
+    232          #endif
+    233          
+    234          
+    235          
+    236              OS_ENTER_CRITICAL();
+    237              ticks = OSTime;
+    238              OS_EXIT_CRITICAL();
+    239              return (ticks);
+    240          }
+    241          #endif
+    242          
+    243          /*
+    244          *********************************************************************************************************
+    245          *                                            SET SYSTEM CLOCK
+    246          *
+    247          * Description: This function sets the 32-bit counter which keeps track of the number of clock ticks.
+    248          *
+    249          * Arguments  : ticks      specifies the new value that OSTime needs to take.
+    250          *
+    251          * Returns    : none
+    252          *********************************************************************************************************
+    253          */
+    254          
+    255          #if OS_TIME_GET_SET_EN > 0
+    256          void  OSTimeSet (INT32U ticks)
+    257          {
+    258          #if OS_CRITICAL_METHOD == 3                      /* Allocate storage for CPU status register           */
+    259              OS_CPU_SR  cpu_sr = 0;
+    260          #endif
+    261          
+    262          
+    263          
+    264              OS_ENTER_CRITICAL();
+    265              OSTime = ticks;
+    266              OS_EXIT_CRITICAL();
+    267          }
+    268          #endif
+
+   Maximum stack usage in bytes:
+
+     Function        CSTACK
+     --------        ------
+     OSTimeDly           6
+       -> OS_Sched       0
+     OSTimeDlyHMSM       4
+       -> OSTimeDly      8
+       -> OSTimeDly      8
+       -> OSTimeDly      8
+     OSTimeDlyResume     2
+       -> OS_Sched       0
+     OSTimeGet           2
+     OSTimeSet           2
+
+
+   Segment part sizes:
+
+     Function/Label  Bytes
+     --------------  -----
+     WREG0              2
+     WREG1              2
+     WREG2              2
+     WREG3              2
+     WREG4              2
+     WREG5              2
+     WREG6              2
+     WREG7              2
+     WREG8              2
+     WREG9              2
+     WREG10             2
+     WREG11             2
+     WREG12             2
+     WREG13             2
+     WREG14             2
+     WREG15             2
+     SPLIM              2
+     ACCAL              2
+     ACCAH              2
+     ACCAU              2
+     ACCBL              2
+     ACCBH              2
+     ACCBU              2
+     PCL                2
+     DOSTARTL           2
+     DOENDL             2
+     XMODSRT            2
+     XMODEND            2
+     YMODSRT            2
+     YMODEND            2
+     TMR1               2
+     PR1                2
+     TMR2               2
+     TMR3HLD            2
+     TMR3               2
+     PR2                2
+     PR3                2
+     TMR4               2
+     TMR5HLD            2
+     TMR5               2
+     PR4                2
+     PR5                2
+     TMR6               2
+     TMR7HLD            2
+     TMR7               2
+     PR6                2
+     PR7                2
+     TMR8               2
+     TMR9HLD            2
+     TMR9               2
+     PR8                2
+     PR9                2
+     IC1BUF             2
+     IC2BUF             2
+     IC3BUF             2
+     IC4BUF             2
+     IC5BUF             2
+     IC6BUF             2
+     IC7BUF             2
+     IC8BUF             2
+     OC1RS              2
+     OC1R               2
+     OC2RS              2
+     OC2R               2
+     OC3RS              2
+     OC3R               2
+     OC4RS              2
+     OC4R               2
+     OC5RS              2
+     OC5R               2
+     OC6RS              2
+     OC6R               2
+     OC7RS              2
+     OC7R               2
+     OC8RS              2
+     OC8R               2
+     U1BRG              2
+     U2BRG              2
+     SPI1BUF            2
+     SPI2BUF            2
+     RXBUF0             2
+     RXBUF1             2
+     RXBUF2             2
+     RXBUF3             2
+     TXBUF0             2
+     TXBUF1             2
+     TXBUF2             2
+     TXBUF3             2
+     AD1CSSH            2
+     DMA0STA            2
+     DMA0STB            2
+     DMA0PAD            2
+     DMA0CNT            2
+     DMA1STA            2
+     DMA1STB            2
+     DMA1PAD            2
+     DMA1CNT            2
+     DMA2STA            2
+     DMA2STB            2
+     DMA2PAD            2
+     DMA2CNT            2
+     DMA3STA            2
+     DMA3STB            2
+     DMA3PAD            2
+     DMA3CNT            2
+     DMA4STA            2
+     DMA4STB            2
+     DMA4PAD            2
+     DMA4CNT            2
+     DMA5STA            2
+     DMA5STB            2
+     DMA5PAD            2
+     DMA5CNT            2
+     DMA6STA            2
+     DMA6STB            2
+     DMA6PAD            2
+     DMA6CNT            2
+     DMA7STA            2
+     DMA7STB            2
+     DMA7PAD            2
+     DMA7CNT            2
+     DSADR              2
+     OSTimeDly        268
+     OSTimeDlyHMSM    208
+     OSTimeDlyResume  568
+     OSTimeGet         36
+     OSTimeSet         36
+     _A_C1INTE          2
+     _A_C1INTF          2
+     _A_C1FIFO          2
+     _A_C1FCTRL         2
+     _A_C1VEC           2
+     _A_C1CTRL2         2
+     _A_C1CTRL1         2
+     _A_DMACS1          2
+     _A_DMACS0          2
+     _A_DMA7REQ         2
+     _A_DMA7CON         2
+     _A_DMA6REQ         2
+     _A_DMA6CON         2
+     _A_DMA5REQ         2
+     _A_DMA5CON         2
+     _A_DMA4REQ         2
+     _A_DMA4CON         2
+     _A_DMA3REQ         2
+     _A_DMA3CON         2
+     _A_DMA2REQ         2
+     _A_DMA2CON         2
+     _A_DMA1REQ         2
+     _A_DMA1CON         2
+     _A_C1RXF2EID       2
+     _A_C1RXF2SID       2
+     _A_C1RXF1EID       2
+     _A_C1RXF1SID       2
+     _A_C1RXF0EID       2
+     _A_C1RXF0SID       2
+     _A_C1RXM2EID       2
+     _A_C1RXM2SID       2
+     _A_C1TR67CON       2
+     _A_C1TR45CON       2
+     _A_C1TR23CON       2
+     _A_C1TR01CON       2
+     _A_C1RXOVF2        2
+     _A_C1RXOVF1        2
+     _A_C1BUFPNT4       2
+     _A_C1BUFPNT3       2
+     _A_C1RXFUL2        2
+     _A_C1RXFUL1        2
+     _A_C1FMSKSEL2      2
+     _A_C1FMSKSEL1      2
+     _A_C1FEN1          2
+     _A_C1CFG2          2
+     _A_C1CFG1          2
+     _A_LATG            2
+     _A_PORTG           2
+     _A_TRISG           2
+     _A_LATF            2
+     _A_PORTF           2
+     _A_TRISF           2
+     _A_LATE            2
+     _A_PORTE           2
+     _A_TRISE           2
+     _A_LATD            2
+     _A_PORTD           2
+     _A_TRISD           2
+     _A_LATC            2
+     _A_PORTC           2
+     _A_TRISC           2
+     _A_LATB            2
+     _A_PORTB           2
+     _A_TRISB           2
+     _A_LATA            2
+     _A_PORTA           2
+     _A_TRISA           2
+     _A_RSCON           2
+     _A_TSCON           2
+     _A_DMA0REQ         2
+     _A_DMA0CON         2
+     _A_AD2CON4         2
+     _A_AD2CSSL         2
+     _A_AD2PCFG         2
+     _A_AD2CHS0         2
+     _A_AD2CHS123       2
+     _A_AD2CON3         2
+     _A_AD2CON2         2
+     _A_AD2CON1         2
+     _A_AD2BUF0         2
+     _A_AD1CON4         2
+     _A_AD1CSSL         2
+     _A_AD1PCFGL        2
+     _A_AD1PCFGH        2
+     _A_AD1CHS0         2
+     _A_AD1CHS123       2
+     _A_AD1CON3         2
+     _A_AD1CON2         2
+     _A_AD1CON1         2
+     _A_AD1BUF0         2
+     _A_ODCF            2
+     _A_ODCA            2
+     _A_C2RXF9SID       2
+     _A_C2RXF8EID       2
+     _A_C2RXF8SID       2
+     _A_C2RXF7EID       2
+     _A_C2RXF7SID       2
+     _A_C2RXF6EID       2
+     _A_C2RXF6SID       2
+     _A_C2RXF5EID       2
+     _A_C2RXF5SID       2
+     _A_C2RXF4EID       2
+     _A_C2RXF4SID       2
+     _A_C2RXF3EID       2
+     _A_C2RXF3SID       2
+     _A_C2RXF2EID       2
+     _A_C2RXF2SID       2
+     _A_C2RXF1EID       2
+     _A_C2RXF1SID       2
+     _A_C2RXF0EID       2
+     _A_C2RXF0SID       2
+     _A_C2RXM2EID       2
+     _A_C2RXM2SID       2
+     _A_C2TR67CON       2
+     _A_C2TR45CON       2
+     _A_PMD3            2
+     _A_PMD2            2
+     _A_PMD1            2
+     _A_NVMKEY          2
+     _A_NVMCON          2
+     _A_OSCTUN          2
+     _A_PLLFBD          2
+     _A_CLKDIV          2
+     _A_OSCCON          2
+     _A_RCON            2
+     _A_C2RXF15EID      2
+     _A_C2RXF15SID      2
+     _A_C2RXF14EID      2
+     _A_C2RXF14SID      2
+     _A_C2RXF13EID      2
+     _A_C2RXF13SID      2
+     _A_C2RXF12EID      2
+     _A_C2RXF12SID      2
+     _A_C2RXF11EID      2
+     _A_C2RXF11SID      2
+     _A_C2RXF10EID      2
+     _A_C2RXF10SID      2
+     _A_C2RXF9EID       2
+     _A_C1RXF14SID      2
+     _A_C1RXF13EID      2
+     _A_C1RXF13SID      2
+     _A_C1RXF12EID      2
+     _A_C1RXF12SID      2
+     _A_C1RXF11EID      2
+     _A_C1RXF11SID      2
+     _A_C1RXF10EID      2
+     _A_C1RXF10SID      2
+     _A_C1RXF9EID       2
+     _A_C1RXF9SID       2
+     _A_C1RXF8EID       2
+     _A_C1RXF8SID       2
+     _A_C1RXF7EID       2
+     _A_C1RXF7SID       2
+     _A_C1RXF6EID       2
+     _A_C1RXF6SID       2
+     _A_C1RXF5EID       2
+     _A_C1RXF5SID       2
+     _A_C1RXF4EID       2
+     _A_C1RXF4SID       2
+     _A_C1RXF3EID       2
+     _A_C1RXF3SID       2
+     _A_C2TR23CON       2
+     _A_C2TR01CON       2
+     _A_C2RXOVF2        2
+     _A_C2RXOVF1        2
+     _A_C2BUFPNT4       2
+     _A_C2BUFPNT3       2
+     _A_C2RXFUL2        2
+     _A_C2RXFUL1        2
+     _A_C2FMSKSEL2      2
+     _A_C2FMSKSEL1      2
+     _A_C2FEN1          2
+     _A_C2CFG2          2
+     _A_C2CFG1          2
+     _A_C2INTE          2
+     _A_C2INTF          2
+     _A_C2FIFO          2
+     _A_C2FCTRL         2
+     _A_C2VEC           2
+     _A_C2CTRL2         2
+     _A_C2CTRL1         2
+     _A_C1RXF15EID      2
+     _A_C1RXF15SID      2
+     _A_C1RXF14EID      2
+     _A_IPC11           2
+     _A_IPC10           2
+     _A_IPC9            2
+     _A_IPC8            2
+     _A_IPC7            2
+     _A_IPC6            2
+     _A_OC3CON          2
+     _A_IPC5            2
+     _A_IPC4            2
+     _A_IPC3            2
+     _A_IPC2            2
+     _A_IPC1            2
+     _A_IPC0            2
+     _A_OC4CON          2
+     _A_IEC4            2
+     _A_IEC3            2
+     _A_IEC2            2
+     _A_IEC1            2
+     _A_IEC0            2
+     _A_IFS4            2
+     _A_IFS3            2
+     _A_IFS2            2
+     _A_IFS1            2
+     _A_IFS0            2
+     _A_OC5CON          2
+     _A_INTCON2         2
+     _A_IC7CON          2
+     _A_IC6CON          2
+     _A_IC5CON          2
+     _A_IC8CON          2
+     _A_IC4CON          2
+     _A_IC3CON          2
+     _A_IC2CON          2
+     _A_IC1CON          2
+     _A_T9CON           2
+     _A_T8CON           2
+     _A_T7CON           2
+     _A_T6CON           2
+     _A_T5CON           2
+     _A_T4CON           2
+     _A_OC1CON          2
+     _A_T3CON           2
+     _A_T2CON           2
+     _A_T1CON           2
+     _A_INTREG          2
+     _A_IPC17           2
+     _A_IPC16           2
+     _A_OC2CON          2
+     _A_IPC15           2
+     _A_IPC14           2
+     _A_IPC13           2
+     _A_IPC12           2
+     _A_U1RXREG         2
+     _A_XBREV           2
+     _A_U2MODE          2
+     _A_U2STA           2
+     _A_U2TXREG         2
+     _A_U2RXREG         2
+     _A_MODCON          2
+     _A_SPI1STAT        2
+     _A_SPI1CON1        2
+     _A_SPI1CON2        2
+     _A_CORCON          2
+     _A_SPI2STAT        2
+     _A_SPI2CON1        2
+     _A_SPI2CON2        2
+     _A_SR              2
+     _A_DCICON1         2
+     _A_DCICON2         2
+     _A_DOENDH          2
+     _A_DOSTARTH        2
+     _A_DCOUNT          2
+     _A_RCOUNT          2
+     _A_PSVPAG          2
+     _A_TBLPAG          2
+     _A_PCH             2
+     _A_DCICON3         2
+     _A_DCISTAT         2
+     _A_INTCON1         2
+     _A_OC6CON          2
+     _A_CNPU2           2
+     _A_CNPU1           2
+     _A_OC7CON          2
+     _A_CNEN2           2
+     _A_CNEN1           2
+     _A_OC8CON          2
+     _A_I2C1RCV         2
+     _A_I2C1TRN         2
+     _A_I2C1BRG         2
+     _A_DISICNT         2
+     _A_I2C1CON         2
+     _A_I2C1STAT        2
+     _A_I2C1ADD         2
+     _A_I2C1MSK         2
+     _A_I2C2RCV         2
+     _A_I2C2TRN         2
+     _A_I2C2BRG         2
+     _A_I2C2CON         2
+     _A_I2C2STAT        2
+     _A_I2C2ADD         2
+     _A_I2C2MSK         2
+     _A_U1MODE          2
+     _A_U1STA           2
+     _A_U1TXREG         2
+
+ 
+ 558 words in segment CODE
+ 820 bytes in segment SFR_A
+ 
+ 558 words of CODE memory
+   0 bytes of DATA memory (+ 820 bytes shared)
+
+Errors: none
+Warnings: none
