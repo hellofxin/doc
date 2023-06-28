@@ -1,2 +1,0 @@
-@echo off
-start E:\2017\tool\SublimeText3\sublime_text.exe   C:\Windows\System32\drivers\etc\hosts

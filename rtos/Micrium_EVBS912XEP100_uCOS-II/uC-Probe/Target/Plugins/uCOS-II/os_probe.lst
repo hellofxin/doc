@@ -1,0 +1,976 @@
+##############################################################################
+#                                                                            #
+# IAR dsPIC C/EC++ Compiler V1.30B/W32                 13/Dec/2007  20:41:58 #
+# Copyright 2001-2006 IAR Systems. All rights reserved.                      #
+#                                                                            #
+#    Cpu          =  dsPIC                                                   #
+#    Data model   =  Large                                                   #
+#    Double size  =  32 bits                                                 #
+#                 =                                                          #
+#    Source file  =  os_probe.c                                              #
+#    Command line =  -D__dsPIC33FJ256GP710__ os_probe.c                      #
+#                    -oC:\Micrium\Software\EVALBO~1\MICROC~1\EXPLOR~1\PIC33F #
+#                    ~1\MPLAB_~1\OS-Probe\Output\os_probe.r59                #
+#                    -fC:\Micrium\Software\EvalBoards\Microchip\Explorer16\P #
+#                    IC33FJ256\MPLAB_IAR\OS-Probe\ExtPath.xcl (-I            #
+#                    "C:\Program Files\IAR Systems\Embedded Workbench        #
+#                    3.2\dsPIC\inc\clib" -I "C:\Program Files\IAR            #
+#                    Systems\Embedded Workbench 3.2\dsPIC\inc" -I            #
+#                    C:\Micrium\Software\uC-CPU -I                           #
+#                    C:\Micrium\Software\uC-CPU\Microchip\PIC33FJ256\MPLAB_I #
+#                    AR -I C:\Micrium\Software\uC-LIB -I                     #
+#                    C:\Micrium\Software\uCOS-II\Source -I                   #
+#                    C:\Micrium\Software\uCOS-II\Ports\Microchip\PIC33FJ256\ #
+#                    MPLAB_IAR -I C:\Micrium\Software\uC-Probe\Target\Commun #
+#                    ication\Generic\RS-232\Ports\Microchip\dsPIC33\IAR_iccD #
+#                    SPIC -I C:\Micrium\Software\uC-Probe\Target\Communicati #
+#                    on\Generic\RS-232\Source -I                             #
+#                    C:\Micrium\Software\uC-Probe\Target\Communication\Gener #
+#                    ic\Source -I C:\Micrium\Software\uC-Probe\Target\Plugin #
+#                    s\uCOS-II -I C:\Micrium\Software\EvalBoards\Microchip\E #
+#                    xplorer16\PIC33FJ256\MPLAB_IAR\OS-Probe -I              #
+#                    C:\Micrium\Software\EvalBoards\Microchip\Explorer16\PIC #
+#                    33FJ256\MPLAB_IAR\BSP) -r -e --data_model=l --cpu=0     #
+#                    -lc . -la . -z9 --no_cse --no_unroll --no_inline        #
+#                    --no_code_motion                                        #
+#    List file    =  .\os_probe.lst                                          #
+#    Object file  =  C:\Micrium\Software\EVALBO~1\MICROC~1\EXPLOR~1\PIC33F~1 #
+#                    \MPLAB_~1\OS-Probe\Output\os_probe.r59                  #
+#                                                                            #
+#                                                                            #
+##############################################################################
+
+C:\Micrium\Software\uC-Probe\Target\Plugins\uCOS-II\os_probe.c
+      1          /*
+      2          *********************************************************************************************************
+      3          *                                     uC/Probe uC/OS-II Plug-in
+      4          *
+      5          *                          (c) Copyright 2003-2006; Micrium, Inc.; Weston, FL
+      6          *
+      7          *               All rights reserved.  Protected by international copyright laws.
+      8          *               Knowledge of the source code may NOT be used to develop a similar product.
+      9          *               Please help us continue to provide the Embedded community with the finest
+     10          *               software available.  Your honesty is greatly appreciated.
+     11          *********************************************************************************************************
+     12          */
+     13          
+     14          /*
+     15          *********************************************************************************************************
+     16          *
+     17          *                                              uC/Probe
+     18          *
+     19          *                                         Plug-in for uC/OS-II
+     20          *
+     21          * Filename      : os_probe.c
+     22          * Version       : V1.40
+     23          * Programmer(s) : BAN
+     24          *********************************************************************************************************
+     25          */
+     26          
+     27          /*
+     28          *********************************************************************************************************
+     29          *                                              INCLUDE FILES
+     30          *********************************************************************************************************
+     31          */
+     32          
+     33          #define  OS_PROBE_MODULE
+     34          #include <os_probe.h>
+     35          
+     36          
+     37          /*
+     38          *********************************************************************************************************
+     39          *                                             LOCAL CONSTANTS
+     40          *********************************************************************************************************
+     41          */
+     42          
+     43          
+     44          /*
+     45          *********************************************************************************************************
+     46          *                                            LOCAL DATA TYPES
+     47          *********************************************************************************************************
+     48          */
+     49          
+     50          
+     51          /*
+     52          *********************************************************************************************************
+     53          *                                              LOCAL TABLES
+     54          *********************************************************************************************************
+     55          */
+     56          
+     57          
+     58          /*
+     59          *********************************************************************************************************
+     60          *                                         LOCAL GLOBAL VARIABLES
+     61          *********************************************************************************************************
+     62          */
+     63          
+     64          #if (OS_PROBE_TASK > 0)
+     65          static  OS_STK  OSProbe_TaskStk[OS_PROBE_TASK_STK_SIZE];
+     66          #endif
+     67          
+     68          
+     69          /*
+     70          *********************************************************************************************************
+     71          *                                        LOCAL FUNCTION PROTOTYPES
+     72          *********************************************************************************************************
+     73          */
+     74          
+     75          #if (OS_PROBE_TASK > 0)
+     76          static  void  OSProbe_InitOS(void);
+     77          static  void  OSProbe_Task  (void  *p_arg);
+     78          #endif
+     79          
+     80          
+     81          /*
+     82          *********************************************************************************************************
+     83          *                                       LOCAL CONFIGURATION ERRORS
+     84          *********************************************************************************************************
+     85          */
+     86          
+     87          
+     88          /*
+     89          *********************************************************************************************************
+     90          *                                             OSProbe_Init()
+     91          *
+     92          * Description : Initialize the uC/Probe Plug-In for uC/OS-II.
+     93          *
+     94          * Argument(s) : none.
+     95          *
+     96          * Return(s)   : none.
+     97          *********************************************************************************************************
+     98          */
+     99          
+    100          void  OSProbe_Init (void)
+    101          {
+    102          #if (OS_PROBE_TASK > 0)
+    103              OSProbe_SetDelay(100);
+    104              OSProbe_SetCallback((void (*)(void))0);                     /* Force terminal callback function to 'nothing'.       */
+    105          
+    106              (void)OSProbe_TaskCPUUsage;
+    107              (void)OSProbe_TaskStkUsage;
+    108          
+    109              OSProbe_InitOS();
+    110          #endif
+    111          
+    112          #if (OS_PROBE_HOOKS_EN > 0)
+    113              OSProbe_TmrInit();
+    114          
+    115              OSProbe_CyclesCtr   = 0;
+    116              OSProbe_TmrCntsPrev = 0;
+    117          #endif
+    118          }
+    119          
+    120          
+    121          /*
+    122          *********************************************************************************************************
+    123          *                                            OSProbe_InitOS()
+    124          *
+    125          * Description : Create the task for the uC/Probe Plug-In for uC/OS-II.
+    126          *
+    127          * Argument(s) : none.
+    128          *
+    129          * Return(s)   : none.
+    130          *********************************************************************************************************
+    131          */
+    132          
+    133          #if (OS_PROBE_TASK > 0)
+    134          static  void  OSProbe_InitOS (void)
+    135          {
+    136              INT8U  err;
+    137          
+    138          
+    139          #if (OS_TASK_CREATE_EXT_EN > 0)
+    140              #if (OS_STK_GROWTH == 1)
+    141              err = OSTaskCreateExt( OSProbe_Task,
+    142                                     (void *)0,
+    143                                    &OSProbe_TaskStk[OS_PROBE_TASK_STK_SIZE - 1], /* Set Top-Of-Stack.                            */
+    144                                     OS_PROBE_TASK_PRIO,
+    145                                     OS_PROBE_TASK_PRIO,
+    146                                    &OSProbe_TaskStk[0],                          /* Set Bottom-Of-Stack.                         */
+    147                                     OS_PROBE_TASK_STK_SIZE,
+    148                                     (void *)0,                                   /* No TCB extension.                            */
+    149                                     OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);  /* Enable stack checking + clear stack.         */
+    150              #else
+    151              err = OSTaskCreateExt( OSProbe_Task,
+    152                                     (void *)0,
+    153                                    &OSProbe_TaskStk[0],                          /* Set Top-Of-Stack.                            */
+    154                                     OS_PROBE_TASK_PRIO,
+    155                                     OS_PROBE_TASK_PRIO,
+    156                                    &OSProbe_TaskStk[OS_PROBE_TASK_STK_SIZE - 1], /* Set Bottom-Of-Stack.                         */
+    157                                     OS_PROBE_TASK_STK_SIZE,
+    158                                     (void *)0,                                   /* No TCB extension.                            */
+    159                                     OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);  /* Enable stack checking + clear stack.         */
+    160              #endif
+    161          #else
+    162              #if (OS_STK_GROWTH == 1)
+    163              err = OSTaskCreate( OSProbe_Task,
+    164                                  (void *)0,
+    165                                 &OSProbe_TaskStk[OS_PROBE_TASK_STK_SIZE - 1],
+    166                                  OS_PROBE_TASK_PRIO);
+    167              #else
+    168              err = OSTaskCreate( OSProbe_Task,
+    169                                  (void *)0,
+    170                                 &OSProbe_TaskStk[0],
+    171                                  OS_PROBE_TASK_PRIO);
+    172              #endif
+    173          #endif
+    174          
+    175          #if   (OS_TASK_NAME_SIZE > 15)
+    176              OSTaskNameSet(OS_PROBE_TASK_PRIO, (INT8U *)"Probe OS PlugIn", &err);
+    177          #endif
+    178          }
+    179          #endif
+    180          
+    181          
+    182          /*
+    183          *********************************************************************************************************
+    184          *                                          OSProbe_SetCallback()
+    185          *
+    186          * Description : Set the callback function which will be invoked in OSProbe_Task().
+    187          *
+    188          * Argument(s) : call_back   Pointer to the callback function.
+    189          *
+    190          * Return(s)   : none.
+    191          *********************************************************************************************************
+    192          */
+    193          
+    194          #if (OS_PROBE_TASK > 0)
+    195          void  OSProbe_SetCallback (void (*call_back)(void))
+    196          {
+    197              OSProbe_CallbackFnct = call_back;
+    198          }
+    199          #endif
+    200          
+    201          
+    202          /*
+    203          *********************************************************************************************************
+    204          *                                           OSProbe_SetDelay()
+    205          *
+    206          * Description : Set the delay used in OSProbe_Task().
+    207          *
+    208          * Argument(s) : delay       Delay, in milliseconds.
+    209          *
+    210          * Return(s)   : none.
+    211          *********************************************************************************************************
+    212          */
+    213          
+    214          #if (OS_PROBE_TASK > 0)
+    215          void    OSProbe_SetDelay (INT16U  delay)
+    216          {
+    217              OSProbe_Delay = delay;
+    218          }
+    219          #endif
+    220          
+    221          
+    222          /*
+    223          *********************************************************************************************************
+    224          *********************************************************************************************************
+    225          *                                               TASK HOOKS
+    226          *********************************************************************************************************
+    227          *********************************************************************************************************
+    228          */
+    229          
+    230          /*
+    231          *********************************************************************************************************
+    232          *                                        OSProbe_TaskCreateHook()
+    233          *
+    234          * Description : This function is called when a task is created.
+    235          *
+    236          * Argument(s) : ptcb        Pointer to the task control block of the task being created.
+    237          *
+    238          * Note(s)     : (1) Interrupts are disabled during this call.
+    239          *
+    240          *               (2) This MUST be called from applications's task create hook function App_TaskCreateHook().
+    241          *********************************************************************************************************
+    242          */
+    243          
+    244          #if (OS_PROBE_HOOKS_EN > 0)
+    245          void  OSProbe_TaskCreateHook (OS_TCB *ptcb)
+    246          {
+    247              ptcb->OSTCBCyclesStart = OSProbe_TimeGetCycles();           /* Get the current start time for this task.            */
+    248              ptcb->OSTCBCyclesTot   = 0;                                 /* Update the task's total execution time.              */
+    249          }
+    250          #endif
+    251          
+    252          
+    253          /*
+    254          *********************************************************************************************************
+    255          *                                          OSProbe_TaskSwHook()
+    256          *
+    257          * Description : This function is called when a task switch is performed.
+    258          *
+    259          * Argument(s) : none.
+    260          *
+    261          * Note(s)     : (1) Interrupts are disabled during this call.
+    262          *
+    263          *               (2) It is assumed that the global pointer 'OSTCBHighRdy' points to the TCB of the task that
+    264          *                   will be 'switched in' (i.e. the highest priority task) and, 'OSTCBCur' points to the
+    265          *                   task being switched out (i.e. the preempted task).
+    266          *
+    267          *               (3) This MUST be called from application's task switch hook function App_TaskSwHook().
+    268          *********************************************************************************************************
+    269          */
+    270          
+    271          #if (OS_PROBE_HOOKS_EN > 0)
+    272          void  OSProbe_TaskSwHook (void)
+    273          {
+    274              INT32U  cycles;
+    275          
+    276          
+    277              cycles                         = OSProbe_TimeGetCycles();   /* This task is done.                                   */
+    278              OSTCBCur->OSTCBCyclesTot      += cycles - OSTCBCur->OSTCBCyclesStart;
+    279              OSTCBHighRdy->OSTCBCyclesStart = cycles;                    /* Save absolute #cycles at task activation.            */
+    280          }
+    281          #endif
+    282          
+    283          
+    284          /*
+    285          *********************************************************************************************************
+    286          *                                           OSProbe_TickHook()
+    287          *
+    288          * Description : This function is called every tick.
+    289          *
+    290          * Argument(s) : none.
+    291          *
+    292          * Note(s)     : (1) Interrupts may or may not be ENABLED during this call.
+    293          *
+    294          *               (2) This MUST be called from user's time tick hook function App_TimeTickHook().
+    295          *********************************************************************************************************
+    296          */
+    297          
+    298          #if (OS_PROBE_HOOKS_EN > 0)
+    299          void  OSProbe_TickHook (void)
+    300          {
+    301              (void)OSProbe_TimeGetCycles();
+    302          }
+    303          #endif
+    304          
+    305          
+    306          /*
+    307          *********************************************************************************************************
+    308          *                                         OSProbe_TimeGetCycles()
+    309          *
+    310          * Description : Get time as accurately as possible, stored in a 32-bit variable.
+    311          *
+    312          * Argument(s) : none.
+    313          *
+    314          * Return(s)   : A 32-bit representation of time.
+    315          *********************************************************************************************************
+    316          */
+    317          
+    318          #if (OS_PROBE_HOOKS_EN > 0)
+    319          INT32U   OSProbe_TimeGetCycles(void)
+    320          {
+    321              INT32U     cycles;
+    322          #if (OS_PROBE_TMR_32_BITS > 0)
+    323              INT32U     cnts32;
+    324              INT32U     cnts32_delta;
+    325          #else
+    326              INT16U     cnts16;
+    327              INT16U     cnts16_delta;
+    328          #endif
+    329          #if (OS_CRITICAL_METHOD == 3)                                   /* Allocate storage for CPU status register.            */
+    330              OS_CPU_SR  cpu_sr = 0;
+    331          #endif
+    332          
+    333          
+    334              OS_ENTER_CRITICAL();
+    335          #if (OS_PROBE_TMR_32_BITS > 0)
+    336              cnts32               = OSProbe_TmrRd();                     /* Read current counts of the free running counter.     */
+    337              cnts32_delta         = cnts32 - OSProbe_TmrCntsPrev;
+    338              OSProbe_TmrCntsPrev  = cnts32;                              /* Save current counts for next time.                   */
+    339              OSProbe_CyclesCtr   += cnts32_delta;
+    340          #else
+    341              cnts16               = (INT16U)OSProbe_TmrRd();             /* Read current counts of the free running counter.     */
+    342              cnts16_delta         = cnts16 - OSProbe_TmrCntsPrev;
+    343              OSProbe_TmrCntsPrev  = cnts16;                              /* Save current counts for next time.                   */
+    344              OSProbe_CyclesCtr   += (INT32U)cnts16_delta;
+    345          #endif
+    346              cycles               = OSProbe_CyclesCtr;
+    347              OS_EXIT_CRITICAL();
+    348          
+    349              return (cycles);
+    350          }
+    351          #endif
+    352          
+    353          
+    354          /*
+    355          *********************************************************************************************************
+    356          *********************************************************************************************************
+    357          *                                             LOCAL FUNCTION
+    358          *********************************************************************************************************
+    359          *********************************************************************************************************
+    360          */
+    361          
+    362          /*
+    363          *********************************************************************************************************
+    364          *                                             OSProbe_Task()
+    365          *
+    366          * Description : Updates OSProbe_TaskStkUsage[] and OSProbe_TaskCPUUsage[] and calls
+    367          *               a user-specified callback functions (OSProbe_CallbackFnct()), if the user sets this
+    368          *               function.
+    369          *
+    370          * Argument(s) : p_arg       Argument passed to OSProbe_Task() by 'OSTaskCreate()'.
+    371          *
+    372          * Return(s)   : none.
+    373          *********************************************************************************************************
+    374          */
+    375          
+    376          #if (OS_PROBE_TASK > 0)
+    377          static  void  OSProbe_Task (void *p_arg)
+    378          {
+    379                      OS_TCB  *ptcb;
+    380                      INT16U   i;
+    381                      INT32U   cycles_tot;
+    382              static  INT32U   cycles_dif[OS_MAX_TASKS];
+    383              static  INT32U   cycles_tot_last[OS_MAX_TASKS];
+    384          #if (OS_PROBE_USE_FP == 0)
+    385                      INT32U   max;
+    386          #endif
+    387          
+    388          
+    389              (void)p_arg;
+    390          
+    391                                                                          /* Initialize stored CyclesTot values.                  */
+    392              for (i = 0; i < OS_MAX_TASKS; i++) {
+    393                  cycles_tot_last[i]      = 0;
+    394                  OSProbe_TaskStkUsage[i] = 0;
+    395                  OSProbe_TaskCPUUsage[i] = 0;
+    396              }
+    397          
+    398              while (1) {
+    399                  OSTimeDlyHMSM(0, 0, 0, OSProbe_Delay);
+    400                  if ((INT32U)OSProbe_CallbackFnct != 0) {
+    401                      OSProbe_CallbackFnct();
+    402                  }
+    403          
+    404                                                                          /* Update task CPU usage                                */
+    405                  i          = 0;
+    406                  cycles_tot = 0;
+    407                  ptcb       = &OSTCBTbl[0];                              /*  ... Get pointer to first TCB ...                    */
+    408          
+    409                  while ((i    < OS_MAX_TASKS) &&
+    410                         (ptcb != (OS_TCB *)0) &&
+    411                         (ptcb != (OS_TCB *)1)) {
+    412                                                                          /*  ... Calculate new CyclesDif, the number of cycles   */
+    413                                                                          /*  ... used by the task since the last reading.  Half  */
+    414                                                                          /*  ... the previous value is added to provide some     */
+    415                                                                          /*  ... hysteresis, thereby reducing the natural        */
+    416                                                                          /*  ... "jitter" in the data.                           */
+    417                      cycles_dif[i]       = (ptcb->OSTCBCyclesTot - cycles_tot_last[i]) / 2 + (cycles_dif[i] / 2);
+    418                      cycles_tot_last[i]  = ptcb->OSTCBCyclesTot;
+    419                      cycles_tot         += cycles_dif[i];
+    420          
+    421                      if (ptcb->OSTCBStkSize == 0) {
+    422                          OSProbe_TaskStkUsage[i] = 0;
+    423                      } else {
+    424          #if (OS_PROBE_USE_FP > 0)
+    425          #if (OS_STK_GROWTH == 1)
+    426                          OSProbe_TaskStkUsage[i] = (FP32)(((INT32U)(ptcb->OSTCBStkBase) - (INT32U)(ptcb->OSTCBStkPtr)) * 100)
+    427                                                  / ((ptcb->OSTCBStkSize) * sizeof (OS_STK));
+    428          #else
+    429                          OSProbe_TaskStkUsage[i] = (FP32)(((INT32U)(ptcb->OSTCBStkPtr) - (INT32U)(ptcb->OSTCBStkBase)) * 100)
+    430                                                  / ((ptcb->OSTCBStkSize) * sizeof (OS_STK));
+    431          #endif
+    432          #else
+    433                          max = (ptcb->OSTCBStkSize) * sizeof (OS_STK) / 100L;
+    434          
+    435          #if (OS_STK_GROWTH == 1)
+    436                          OSProbe_TaskStkUsage[i] = (INT8U)(((INT32U)(ptcb->OSTCBStkBase) - (INT32U)(ptcb->OSTCBStkPtr)) / max);
+    437          #else
+    438                          OSProbe_TaskStkUsage[i] = (INT8U)(((INT32U)(ptcb->OSTCBStkPtr)  - (INT32U)(ptcb->OSTCBStkBase)) / max);
+    439          #endif
+    440          #endif
+    441                      }
+    442          
+    443                      ptcb = ptcb->OSTCBPrev;
+    444          
+    445                      i++;
+    446                  }
+    447          
+    448          #if (OS_PROBE_USE_FP == 0)
+    449                  max = cycles_tot / 100L;
+    450          #endif
+    451                                                                          /*  ... For each task, calculate percent CPU usage.     */
+    452                  for (i = 0; i < OS_MAX_TASKS; i++) {
+    453          #if (OS_PROBE_USE_FP > 0)
+    454                      OSProbe_TaskCPUUsage[i] = (FP32)(cycles_dif[i] * 100) / cycles_tot;
+    455          #else
+    456                      OSProbe_TaskCPUUsage[i] = (INT8U)(cycles_dif[i] / max);
+    457          #endif
+    458                  }
+    459              }
+    460          }
+    461          #endif
+
+   Maximum stack usage in bytes:
+
+     Function                   CSTACK
+     --------                   ------
+     OSProbe_Init                   2
+       -> OSProbe_SetDelay          0
+       -> OSProbe_SetCallback       0
+       -> OSProbe_InitOS            0
+       -> OSProbe_TmrInit           0
+     OSProbe_InitOS                10
+       -> OSTaskCreateExt          20
+       -> OSTaskNameSet            20
+     OSProbe_SetCallback            2
+     OSProbe_SetDelay               2
+     OSProbe_Task                   6
+       -> OSTimeDlyHMSM            12
+     OSProbe_TaskCreateHook         4
+       -> OSProbe_TimeGetCycles     8
+     OSProbe_TaskSwHook             2
+       -> OSProbe_TimeGetCycles     0
+     OSProbe_TickHook               2
+       -> OSProbe_TimeGetCycles     0
+     OSProbe_TimeGetCycles          6
+       -> OSProbe_TmrRd             4
+
+
+   Segment part sizes:
+
+     Function/Label                Bytes
+     --------------                -----
+     WREG0                            2
+     WREG1                            2
+     WREG2                            2
+     WREG3                            2
+     WREG4                            2
+     WREG5                            2
+     WREG6                            2
+     WREG7                            2
+     WREG8                            2
+     WREG9                            2
+     WREG10                           2
+     WREG11                           2
+     WREG12                           2
+     WREG13                           2
+     WREG14                           2
+     WREG15                           2
+     SPLIM                            2
+     ACCAL                            2
+     ACCAH                            2
+     ACCAU                            2
+     ACCBL                            2
+     ACCBH                            2
+     ACCBU                            2
+     PCL                              2
+     DOSTARTL                         2
+     DOENDL                           2
+     XMODSRT                          2
+     XMODEND                          2
+     YMODSRT                          2
+     YMODEND                          2
+     TMR1                             2
+     PR1                              2
+     TMR2                             2
+     TMR3HLD                          2
+     TMR3                             2
+     PR2                              2
+     PR3                              2
+     TMR4                             2
+     TMR5HLD                          2
+     TMR5                             2
+     PR4                              2
+     PR5                              2
+     TMR6                             2
+     TMR7HLD                          2
+     TMR7                             2
+     PR6                              2
+     PR7                              2
+     TMR8                             2
+     TMR9HLD                          2
+     TMR9                             2
+     PR8                              2
+     PR9                              2
+     IC1BUF                           2
+     IC2BUF                           2
+     IC3BUF                           2
+     IC4BUF                           2
+     IC5BUF                           2
+     IC6BUF                           2
+     IC7BUF                           2
+     IC8BUF                           2
+     OC1RS                            2
+     OC1R                             2
+     OC2RS                            2
+     OC2R                             2
+     OC3RS                            2
+     OC3R                             2
+     OC4RS                            2
+     OC4R                             2
+     OC5RS                            2
+     OC5R                             2
+     OC6RS                            2
+     OC6R                             2
+     OC7RS                            2
+     OC7R                             2
+     OC8RS                            2
+     OC8R                             2
+     U1BRG                            2
+     U2BRG                            2
+     SPI1BUF                          2
+     SPI2BUF                          2
+     RXBUF0                           2
+     RXBUF1                           2
+     RXBUF2                           2
+     RXBUF3                           2
+     TXBUF0                           2
+     TXBUF1                           2
+     TXBUF2                           2
+     TXBUF3                           2
+     AD1CSSH                          2
+     DMA0STA                          2
+     DMA0STB                          2
+     DMA0PAD                          2
+     DMA0CNT                          2
+     DMA1STA                          2
+     DMA1STB                          2
+     DMA1PAD                          2
+     DMA1CNT                          2
+     DMA2STA                          2
+     DMA2STB                          2
+     DMA2PAD                          2
+     DMA2CNT                          2
+     DMA3STA                          2
+     DMA3STB                          2
+     DMA3PAD                          2
+     DMA3CNT                          2
+     DMA4STA                          2
+     DMA4STB                          2
+     DMA4PAD                          2
+     DMA4CNT                          2
+     DMA5STA                          2
+     DMA5STB                          2
+     DMA5PAD                          2
+     DMA5CNT                          2
+     DMA6STA                          2
+     DMA6STB                          2
+     DMA6PAD                          2
+     DMA6CNT                          2
+     DMA7STA                          2
+     DMA7STB                          2
+     DMA7PAD                          2
+     DMA7CNT                          2
+     DSADR                            2
+     OSProbe_CallbackFnct             4
+     OSProbe_Delay                    2
+     OSProbe_TaskCPUUsage            80
+     OSProbe_TaskStkUsage            80
+     OSProbe_CyclesCtr                4
+     OSProbe_TmrCntsPrev              2
+     OSProbe_TaskStk                800
+     OSProbe_Init                    72
+     OSProbe_InitOS                 116
+     OSProbe_SetCallback             12
+     OSProbe_SetDelay                 8
+     OSProbe_TaskCreateHook          80
+     OSProbe_TaskSwHook             176
+     OSProbe_TickHook                12
+     OSProbe_TimeGetCycles           84
+     OSProbe_Task                   848
+     cycles_dif                      80
+     cycles_tot_last                 80
+     ?<Constant "Probe OS PlugIn">   32
+     _A_PORTB                         2
+     _A_TRISB                         2
+     _A_LATA                          2
+     _A_PORTA                         2
+     _A_TRISA                         2
+     _A_C1RXF5EID                     2
+     _A_C1RXF6SID                     2
+     _A_C1RXF6EID                     2
+     _A_C1RXF7SID                     2
+     _A_C1RXF7EID                     2
+     _A_C1RXF8SID                     2
+     _A_C1RXF8EID                     2
+     _A_C1RXF9SID                     2
+     _A_RSCON                         2
+     _A_TSCON                         2
+     _A_DCISTAT                       2
+     _A_DCICON3                       2
+     _A_DCICON2                       2
+     _A_ODCF                          2
+     _A_ODCA                          2
+     _A_LATG                          2
+     _A_PORTG                         2
+     _A_TRISG                         2
+     _A_LATF                          2
+     _A_PORTF                         2
+     _A_TRISF                         2
+     _A_LATE                          2
+     _A_PORTE                         2
+     _A_TRISE                         2
+     _A_LATD                          2
+     _A_PORTD                         2
+     _A_TRISD                         2
+     _A_LATC                          2
+     _A_PORTC                         2
+     _A_TRISC                         2
+     _A_LATB                          2
+     _A_U1MODE                        2
+     _A_I2C2MSK                       2
+     _A_I2C2ADD                       2
+     _A_I2C2STAT                      2
+     _A_I2C2CON                       2
+     _A_I2C2BRG                       2
+     _A_I2C2TRN                       2
+     _A_I2C2RCV                       2
+     _A_I2C1MSK                       2
+     _A_I2C1ADD                       2
+     _A_I2C1STAT                      2
+     _A_I2C1CON                       2
+     _A_I2C1BRG                       2
+     _A_I2C1TRN                       2
+     _A_I2C1RCV                       2
+     _A_OC8CON                        2
+     _A_C1RXF11EID                    2
+     _A_C1RXF12SID                    2
+     _A_DCICON1                       2
+     _A_C1RXF9EID                     2
+     _A_SPI2CON2                      2
+     _A_SPI2CON1                      2
+     _A_SPI2STAT                      2
+     _A_C1RXF10SID                    2
+     _A_SPI1CON2                      2
+     _A_SPI1CON1                      2
+     _A_SPI1STAT                      2
+     _A_C1RXF10EID                    2
+     _A_U2RXREG                       2
+     _A_U2TXREG                       2
+     _A_U2STA                         2
+     _A_U2MODE                        2
+     _A_C1RXF11SID                    2
+     _A_U1RXREG                       2
+     _A_U1TXREG                       2
+     _A_U1STA                         2
+     _A_C1RXFUL1                      2
+     _A_C1RXFUL2                      2
+     _A_DMA5REQ                       2
+     _A_DMA5CON                       2
+     _A_C1BUFPNT3                     2
+     _A_C1BUFPNT4                     2
+     _A_C1RXOVF1                      2
+     _A_C1RXOVF2                      2
+     _A_DMA4REQ                       2
+     _A_DMA4CON                       2
+     _A_C1TR01CON                     2
+     _A_C1TR23CON                     2
+     _A_C1TR45CON                     2
+     _A_C1TR67CON                     2
+     _A_DMA3REQ                       2
+     _A_DMA3CON                       2
+     _A_C1RXM2SID                     2
+     _A_C1RXM2EID                     2
+     _A_C1CTRL1                       2
+     _A_C1CTRL2                       2
+     _A_DMACS1                        2
+     _A_DMACS0                        2
+     _A_C1VEC                         2
+     _A_C1FCTRL                       2
+     _A_C1FIFO                        2
+     _A_C1INTF                        2
+     _A_DMA7REQ                       2
+     _A_DMA7CON                       2
+     _A_C1INTE                        2
+     _A_C1CFG1                        2
+     _A_C1CFG2                        2
+     _A_C1FEN1                        2
+     _A_DMA6REQ                       2
+     _A_DMA6CON                       2
+     _A_C1FMSKSEL1                    2
+     _A_C1FMSKSEL2                    2
+     _A_AD2PCFG                       2
+     _A_AD2CHS0                       2
+     _A_AD2CHS123                     2
+     _A_AD2CON3                       2
+     _A_AD2CON2                       2
+     _A_AD2CON1                       2
+     _A_AD2BUF0                       2
+     _A_AD1CON4                       2
+     _A_AD1CSSL                       2
+     _A_C1RXF5SID                     2
+     _A_AD1PCFGL                      2
+     _A_AD1PCFGH                      2
+     _A_AD1CHS0                       2
+     _A_AD1CHS123                     2
+     _A_AD1CON3                       2
+     _A_AD1CON2                       2
+     _A_AD1CON1                       2
+     _A_AD1BUF0                       2
+     _A_C1RXF0SID                     2
+     _A_C1RXF0EID                     2
+     _A_DMA2REQ                       2
+     _A_DMA2CON                       2
+     _A_C1RXF1SID                     2
+     _A_C1RXF1EID                     2
+     _A_C1RXF2SID                     2
+     _A_C1RXF2EID                     2
+     _A_DMA1REQ                       2
+     _A_DMA1CON                       2
+     _A_C1RXF3SID                     2
+     _A_C1RXF3EID                     2
+     _A_C1RXF4SID                     2
+     _A_C1RXF4EID                     2
+     _A_DMA0REQ                       2
+     _A_DMA0CON                       2
+     _A_AD2CON4                       2
+     _A_AD2CSSL                       2
+     _A_IEC0                          2
+     _A_IFS4                          2
+     _A_IFS3                          2
+     _A_IFS2                          2
+     _A_IFS1                          2
+     _A_IFS0                          2
+     _A_INTCON2                       2
+     _A_INTCON1                       2
+     _A_CNPU2                         2
+     _A_CNPU1                         2
+     _A_CNEN2                         2
+     _A_CNEN1                         2
+     _A_DISICNT                       2
+     _A_XBREV                         2
+     _A_C2RXF6EID                     2
+     _A_C2RXF7SID                     2
+     _A_C2RXF7EID                     2
+     _A_C2RXF8SID                     2
+     _A_IPC13                         2
+     _A_IPC12                         2
+     _A_IPC11                         2
+     _A_IPC10                         2
+     _A_IPC9                          2
+     _A_IPC8                          2
+     _A_IPC7                          2
+     _A_IPC6                          2
+     _A_IPC5                          2
+     _A_IPC4                          2
+     _A_IPC3                          2
+     _A_IPC2                          2
+     _A_IPC1                          2
+     _A_IPC0                          2
+     _A_IEC4                          2
+     _A_IEC3                          2
+     _A_IEC2                          2
+     _A_IEC1                          2
+     _A_C2RXF12EID                    2
+     _A_C2RXF13SID                    2
+     _A_C2RXF13EID                    2
+     _A_C2RXF14SID                    2
+     _A_C2RXF14EID                    2
+     _A_C2RXF15SID                    2
+     _A_C2RXF15EID                    2
+     _A_RCON                          2
+     _A_OSCCON                        2
+     _A_CLKDIV                        2
+     _A_PLLFBD                        2
+     _A_OSCTUN                        2
+     _A_NVMCON                        2
+     _A_NVMKEY                        2
+     _A_PMD1                          2
+     _A_PMD2                          2
+     _A_PMD3                          2
+     _A_MODCON                        2
+     _A_CORCON                        2
+     _A_SR                            2
+     _A_DOENDH                        2
+     _A_C2RXF8EID                     2
+     _A_DOSTARTH                      2
+     _A_C2RXF9SID                     2
+     _A_DCOUNT                        2
+     _A_RCOUNT                        2
+     _A_PSVPAG                        2
+     _A_TBLPAG                        2
+     _A_PCH                           2
+     _A_C2RXF9EID                     2
+     _A_C2RXF10SID                    2
+     _A_C2RXF10EID                    2
+     _A_C2RXF11SID                    2
+     _A_C2RXF11EID                    2
+     _A_C2RXF12SID                    2
+     _A_OC1CON                        2
+     _A_C2INTF                        2
+     _A_C2INTE                        2
+     _A_IC8CON                        2
+     _A_C2CFG1                        2
+     _A_IC7CON                        2
+     _A_C2CFG2                        2
+     _A_IC6CON                        2
+     _A_C2FEN1                        2
+     _A_IC5CON                        2
+     _A_C2FMSKSEL1                    2
+     _A_IC4CON                        2
+     _A_C2FMSKSEL2                    2
+     _A_IC3CON                        2
+     _A_C2RXFUL1                      2
+     _A_IC2CON                        2
+     _A_C2RXFUL2                      2
+     _A_IC1CON                        2
+     _A_OC7CON                        2
+     _A_C1RXF12EID                    2
+     _A_C1RXF13SID                    2
+     _A_OC6CON                        2
+     _A_C1RXF13EID                    2
+     _A_C1RXF14SID                    2
+     _A_OC5CON                        2
+     _A_C1RXF14EID                    2
+     _A_C1RXF15SID                    2
+     _A_OC4CON                        2
+     _A_C1RXF15EID                    2
+     _A_C2CTRL1                       2
+     _A_OC3CON                        2
+     _A_C2CTRL2                       2
+     _A_C2VEC                         2
+     _A_OC2CON                        2
+     _A_C2FCTRL                       2
+     _A_C2FIFO                        2
+     _A_C2RXF1EID                     2
+     _A_C2RXF2SID                     2
+     _A_C2RXF2EID                     2
+     _A_T3CON                         2
+     _A_T2CON                         2
+     _A_C2RXF3SID                     2
+     _A_C2RXF3EID                     2
+     _A_C2RXF4SID                     2
+     _A_C2RXF4EID                     2
+     _A_C2RXF5SID                     2
+     _A_T1CON                         2
+     _A_C2RXF5EID                     2
+     _A_C2RXF6SID                     2
+     _A_INTREG                        2
+     _A_IPC17                         2
+     _A_IPC16                         2
+     _A_IPC15                         2
+     _A_IPC14                         2
+     _A_C2BUFPNT3                     2
+     _A_T9CON                         2
+     _A_T8CON                         2
+     _A_C2BUFPNT4                     2
+     _A_C2RXOVF1                      2
+     _A_C2RXOVF2                      2
+     _A_C2TR01CON                     2
+     _A_C2TR23CON                     2
+     _A_T7CON                         2
+     _A_T6CON                         2
+     _A_C2TR45CON                     2
+     _A_C2TR67CON                     2
+     _A_C2RXM2SID                     2
+     _A_C2RXM2EID                     2
+     _A_C2RXF0SID                     2
+     _A_T5CON                         2
+     _A_T4CON                         2
+     _A_C2RXF0EID                     2
+     _A_C2RXF1SID                     2
+
+ 
+   704 words in segment CODE
+    16 words in segment CONST
+ 1 132 bytes in segment MEM_Z
+   820 bytes in segment SFR_A
+ 
+   720 words of CODE memory
+ 1 132 bytes of DATA memory (+ 820 bytes shared)
+
+Errors: none
+Warnings: none

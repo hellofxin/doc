@@ -1,7 +1,0 @@
-if has("vms")
-set nobackup " do not keep a backup file, use versions instead
-"else
-" set backup " keep a backup file
-endi
-就可以了，注意这里的配置不是在vimrc中进行配置的，是在vim文件夹下的vim74的vimrc_example.vim中配置的
-" means comment
