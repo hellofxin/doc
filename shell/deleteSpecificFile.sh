@@ -6,9 +6,9 @@ echo "$stringBegin"
 echo "$stringSeparate"
 
 # 配置是否进入目标目录
-cfgCD=true
+cfgCD=false
 echo "cfgCD: $cfgCD"
-cfgTargetFilePattern="*.[cs]"
+cfgTargetFilePattern="*.[c]"
 echo "cfgTargetFilePattern: ${cfgTargetFilePattern}"
 workingRoot=`pwd`
 echo "workingRoot: $workingRoot"
