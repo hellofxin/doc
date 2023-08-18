@@ -1,41 +1,26 @@
-# BO_ 2565865010 ch0_tx_J1939_NM_TX: 8 BDCU
-#  SG_ SIGNAL0 : 0|32@1+ (1,0) [0|65535] "" Vector__XXX
-#  SG_ SIGNAL0 : 32|32@1+ (1,0) [0|65535] "" Vector__XXX
-# BO_ 2565865010 ch0_tx_J1939_NM_1: 8 BDCU
-#  SG_ SIGNAL0 : 0|32@1+ (1,0) [0|65535] "" Vector__XXX
-#  SG_ SIGNAL0 : 32|32@1+ (1,0) [0|65535] "" Vector__XXX
-# BO_ 2565865010 ch0_tx_J1939_NM_2: 8 CIOM
-#  SG_ SIGNAL0 : 0|32@1+ (1,0) [0|65535] "" Vector__XXX
-#  SG_ SIGNAL0 : 32|32@1+ (1,0) [0|65535] "" Vector__XXX
-# BO_ 2565865214 ch0_rx_J1939_NM_RX: 8 Vector__XXX
-#  SG_ SIGNAL0_11 : 0|32@1+ (1,0) [0|65535] ""  CIOM
-#  SG_ SIGNAL0_12 : 32|32@1+ (1,0) [0|65535] ""  BDCU,CIOM
-# BO_ 2565865214 ch0_rx_J1939_NM_1: 8 Vector__XXX
-# SG_ SIGNAL0_12 : 32|32@1+ (1,0) [0|65535] ""  BDCU,CIOM
-#  SG_ SIGNAL0_11 : 0|32@1+ (1,0) [0|65535] ""  CIOM
-# BO_ 2565865214 ch0_rx_J1939_NM_2: 8 Vector__XXX
-#  SG_ SIGNAL0_11 : 0|32@1+ (1,0) [0|65535] ""  CIOM
-#  SG_ SIGNAL0_11 : 32|32@1+ (1,0) [0|65535] ""  RDCM
+echo "======================================================================"
 
+sourceDbc=$1
+echo "sourceDbc: ${sourceDbc}"
+if [ ! -e ${sourceDbc} ]; then
+	echo "source dbc is not specified"
+	echo "exit"
+	exit
+fi
 
-source0="BDCU_GCAN_v2.2_GenDBC20221013_test.dbc"
-source1="BDCU_GCAN_v2.2_GenDBC20221013.dbc"
-source2="00_BDCU_BCAN_GenDBC20230726.dbc"
+sourceNode=$2
+echo "sourceNode: ${sourceNode}"
+if [ -z ${sourceNode} ]; then
+	echo "source node is not specified"
+	echo "0 is used"
+	${sourceNode}='0'
+fi
 
+prefixTx="ch${sourceNode}_tx_"
+echo "prefixTx: ${prefixTx}"
 
-# sed -nr ':a; N; /\bTIME/!ba; /RFTIME/!p;' list.txt
-# awk "/^BO_/,/BDCU/{print}" ${source1}
-# sed -rn '/^BO_/{:next; N; /\bSG_.*BDCU/!bnext; s/$/\n=========\n/g; p;}' ${source0}
-
-# OK awk
-# awk '/^BO_/{gsub($3, "ch0"$3, $3); print;}' ${source0}
-# OK sed
-sed -ri.bak '/^BO_.*BDCU/{
-	/ch.+tx/!{
-		s/ (\w+):/ ch0_tx_\1:/g;
-		# p;
-	}
-}' ${source2}
+prefixRx="ch${sourceNode}_rx_"
+echo "prefixRx: ${prefixRx}"
 
 rx_bo="rx_bo.txt"
 if [ -e $rx_bo ]; then
@@ -43,7 +28,22 @@ if [ -e $rx_bo ]; then
 fi
 touch $rx_bo
 
-sed -rn '
+
+# awk "/^BO_/,/BDCU/{print}" ${source1}
+
+# OK awk
+# awk '/^BO_/{gsub($3, "ch0"$3, $3); print;}' ${source0}
+
+# OK sed
+sed -ri.bak "/^BO_.*BDCU/{
+	/${prefixTx}/!{
+		s/ (ch._.x_)?(\w+):/ ${prefixTx}\2:/g;
+		# p;
+	}
+}" ${sourceDbc}
+
+
+sed -rn "
 /^BO_/{ 							# 先找BO_开头的行A
 	/BDCU/!{ 						# 如果行A不含有BDCU字符串
 		:b; h; n;{ 					# 将数据覆盖存入hold空间，读取下一行A+1
@@ -56,27 +56,26 @@ sed -rn '
 			}						# A+1行数据含有目标数据SG BDCU
 			H; g;					# 则向hold空间追加当前A+1行数据，并从hold空间获取全部数据
 			/BO_ [0-9]+ \w+: [0-9]+ \w+/{
-				/ch.+rx/!{
-					# 此时读取了多行，写入的话，会将模式空间的多行写入当前LC位置，不对。
-					# p;
-					s/(BO_ [0-9]+ \w+: [0-9]+ \w+).*/\1/g;
-					p;
-				}
+				# 此时读取了多行，写入的话，会将模式空间的多行写入当前LC位置，不对。
+				# p;
+				s/(BO_ [0-9]+ \w+: [0-9]+ \w+).*/\1/g;
+				p;
 			}
 		}
 	}
 }
-' ${source2} >> ${rx_bo}
+" ${sourceDbc} >> ${rx_bo}
 
 
 cat ${rx_bo} | while read target_line; do
+	echo "target_line: ${target_line}"
 	sed -ri "
 		/${target_line}/{
 			# p;
-			s/(BO_ [0-9]+ )(\w+)(: [0-9]+ \w+)/\1ch0_rx_\2\3/g;
+			s/(BO_ [0-9]+ )(ch._.x_)?(\w+)(: [0-9]+ \w+)/\1${prefixRx}\3\4/g;
 			# p;
 		}
-	" ${source2}
+	" ${sourceDbc}
 done
 
 
