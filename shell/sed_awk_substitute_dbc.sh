@@ -22,6 +22,7 @@ source0="BDCU_GCAN_v2.2_GenDBC20221013_test.dbc"
 source1="BDCU_GCAN_v2.2_GenDBC20221013.dbc"
 source2="00_BDCU_BCAN_GenDBC20230726.dbc"
 
+
 # sed -nr ':a; N; /\bTIME/!ba; /RFTIME/!p;' list.txt
 # awk "/^BO_/,/BDCU/{print}" ${source1}
 # sed -rn '/^BO_/{:next; N; /\bSG_.*BDCU/!bnext; s/$/\n=========\n/g; p;}' ${source0}
@@ -29,8 +30,18 @@ source2="00_BDCU_BCAN_GenDBC20230726.dbc"
 # OK awk
 # awk '/^BO_/{gsub($3, "ch0"$3, $3); print;}' ${source0}
 # OK sed
-# sed -rn '/^BO_.*BDCU/{s/ (\w*):/ ch0_tx_\1:/g; s/$/\n=========\n/g; p;}' ${source0}
+sed -ri.bak '/^BO_.*BDCU/{
+	/ch.+tx/!{
+		s/ (\w+):/ ch0_tx_\1:/g;
+		# p;
+	}
+}' ${source2}
 
+rx_bo="rx_bo.txt"
+if [ -e $rx_bo ]; then
+	rm $rx_bo
+fi
+touch $rx_bo
 
 sed -rn '
 /^BO_/{ 							# 先找BO_开头的行A
@@ -43,11 +54,36 @@ sed -rn '
 			/\bSG_.*BDCU/!{			# A+1不含有目标数据SG BDCU，则
 				 H; n; bc;			# 向hold空间追加当前A+1行数据，读取下一行，跳转到:c
 			}						# A+1行数据含有目标数据SG BDCU
-			H; g; 					# 则向hold空间追加当前A+1行数据，并从hold空间获取全部数据
-			s/ (\w*):/ =====_\1:/; 
-			s/$/\n=========\n/g; 
-			p;
+			H; g;					# 则向hold空间追加当前A+1行数据，并从hold空间获取全部数据
+			/BO_ [0-9]+ \w+: [0-9]+ \w+/{
+				/ch.+rx/!{
+					# 此时读取了多行，写入的话，会将模式空间的多行写入当前LC位置，不对。
+					# p;
+					s/(BO_ [0-9]+ \w+: [0-9]+ \w+).*/\1/g;
+					p;
+				}
+			}
 		}
 	}
 }
-' ${source0}
+' ${source2} >> ${rx_bo}
+
+
+cat ${rx_bo} | while read target_line; do
+	sed -ri "
+		/${target_line}/{
+			# p;
+			s/(BO_ [0-9]+ )(\w+)(: [0-9]+ \w+)/\1ch0_rx_\2\3/g;
+			# p;
+		}
+	" ${source2}
+done
+
+
+# cat ${source2} | while read src_line; do
+# 	cat ${rx_bo} | while read target_line; do
+# 		if [ ${src_line} == ${target_line} ]; then
+# 			echo ${src_line}
+# 		fi
+# 	done
+# done
