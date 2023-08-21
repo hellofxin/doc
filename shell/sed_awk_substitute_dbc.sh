@@ -30,13 +30,13 @@ echo "prefixModified: ${prefixModified}"
 prefixDeleted="TO_BE_DELETED::"
 echo "prefixDeleted: ${prefixDeleted}"
 
-rx_bo="rx_bo.txt"
+rx_bo="rx_bo_${sourceNode}.txt"
 if [ -e $rx_bo ]; then
 	rm $rx_bo
 fi
 touch $rx_bo
 
-tx_bo="tx_bo.txt"
+tx_bo="tx_bo_${sourceNode}.txt"
 if [ -e $tx_bo ]; then
 	rm $tx_bo
 fi
@@ -55,21 +55,21 @@ sed -En "/^BO_.*BDCU/{
 		s/(.*)/${prefixModified}\1/g;
 		p;
 		# s/ (ch._.x_)?(\w+):/ ${prefixTx}\2:/g;
-	}
 
-	:a;
-		n; 
-		/SG_/!b;
-		s/(.*)/${prefixModified}\1/;
-		p;
-		# s/: [0-9]+\|[0-9]+@/: 0\|64@/g;
-		:c;
+		:a;
 			n; 
 			/SG_/!b;
-			s/(.*)/${prefixDeleted}\1/g;
+			s/(.*)/${prefixModified}\1/;
 			p;
-			# d;
-			bc;
+			# s/: [0-9]+\|[0-9]+@/: 0\|64@/g;
+			:c;
+				n; 
+				/SG_/!b;
+				s/(.*)/${prefixDeleted}\1/g;
+				p;
+				# d;
+				bc;
+	}
 }" ${sourceDbc} >> ${tx_bo}
 
 
@@ -115,26 +115,27 @@ done
 
 
 
+
+
 echo "get rx bo"
 sed -En "
-/^BO_/{ 							# 先找BO_开头的行A
-	/BDCU/!{ 						# 如果行A不含有BDCU字符串
-
-			:b; h; n;{ 					# 将数据覆盖存入hold空间，读取下一行A+1
+/^BO_/{ 							
+	/BDCU/!{ 						
+		/${prefixRx}/!{
+			:b; h; n;{ 					
 				:c;				
-				/^$/b; 					# A+1为空时，退出本次循环，否则继续
-				/^BO_.*BDCU/b; 			# A+1含有BO和BDCU时，退出本次循环，否则继续
-				/^BO_/bb; 				# A+1含有BO,不含BDCU,跳转到:b
-				/\bSG_.*BDCU/!{			# A+1不含有目标数据SG BDCU，则
+				/^$/b; 					
+				/^BO_.*BDCU/b; 			
+				/^BO_/bb; 				
+				/\bSG_.*BDCU/!{			
 					 s/(.*)/${prefixDeleted}\1/g;
 					 p;
-					 H; n; bc;			# 向hold空间追加当前A+1行数据，读取下一行，跳转到:c
-				}						# A+1行数据含有目标数据SG BDCU
+					 H; n; bc;			
+				}						
 				s/(.*)/${prefixModified}\1/;
 				p; 
-				H; g;					# 则向hold空间追加当前A+1行数据，并从hold空间获取全部数据
-				/BO_ [0-9]+ \w+: [0-9]+ \w+/{
-					# 此时读取了多行，写入的话，会将模式空间的多行写入当前LC位置，不对。
+				H; g;					
+				/BO_ [0-9]+ \w+: [0-9]+ \w+/{	
 					# p;
 					s/(BO_ [0-9]+ \w+: [0-9]+ \w+).*/${prefixModified}\1/g;
 					p;
@@ -147,6 +148,7 @@ sed -En "
 					# d;
 					bcc;
 			}
+		}
 	}
 }
 " ${sourceDbc} >> ${rx_bo}
