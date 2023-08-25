@@ -39,35 +39,41 @@ prefixDeleted="TO_BE_DELETED::"
 echo "prefixDeleted: ${prefixDeleted}"
 
 
-rx_bo="rx_bo_${sourceNode}.txt"
-if [ -e $rx_bo ]; then
-	rm $rx_bo
-fi
-touch $rx_bo
+# rx_bo="rx_bo_${sourceNode}.txt"
+# if [ -e $rx_bo ]; then
+# 	rm $rx_bo
+# fi
+# touch $rx_bo
 
-tx_bo="tx_bo_${sourceNode}.txt"
-if [ -e $tx_bo ]; then
-	rm $tx_bo
-fi
-touch $tx_bo
+# tx_bo="tx_bo_${sourceNode}.txt"
+# if [ -e $tx_bo ]; then
+# 	rm $tx_bo
+# fi
+# touch $tx_bo
 
-txt_GenMsgCycleTime="GenMsgCycleTime.txt"
-if [ -e $txt_GenMsgCycleTime ]; then
-	rm $txt_GenMsgCycleTime
-fi
-touch $txt_GenMsgCycleTime
+# txt_rx_tx_bo="rx_tx_bo_${sourceNode}.txt"
+# if [ -e $txt_rx_tx_bo ]; then
+# 	rm $txt_rx_tx_bo
+# fi
+# touch $txt_rx_tx_bo
 
-txt_rx_tx_bo="rx_tx_bo_${sourceNode}.txt"
-if [ -e $txt_rx_tx_bo ]; then
-	rm $txt_rx_tx_bo
+file_rxtx_msg="${sourceNode}_rxtx_msg.txt"
+if [ -e $file_rxtx_msg ]; then
+	rm $file_rxtx_msg
 fi
-touch $txt_rx_tx_bo
+touch $file_rxtx_msg
+
+file_msgAttribute="${sourceNode}_msgAttribute.txt"
+if [ -e $file_msgAttribute ]; then
+	rm $file_msgAttribute
+fi
+touch $file_msgAttribute
 
 
 sed -En "
 	/BO_ /{
 		/BDCU/!{
-			/${prefixRx}/!{
+			# /${prefixRx}/!{
 				s/ (ch._.x_)?(\w+):/ ${prefixRx}\2:/g;
 				h; 
 				:a; n; /SG_/{
@@ -75,15 +81,16 @@ sed -En "
 					s/: [0-9]+\|[0-9]+@/: 0\|64@/g;
 					H; g; p; b; 
 				}
-			}
+			# }
 		}
 	}
-" ${sourceDbc} >> ${rx_bo}
+" ${sourceDbc} >> ${file_rxtx_msg}
 
+echo "" >> ${file_rxtx_msg}
 
 sed -En "
 	/^BO_ .*BDCU/{
-		/${prefixTx}/!{
+		# /${prefixTx}/!{
 			# s/(.*)/${prefixModified}\1/;
 			s/ (ch._.x_)?(\w+):/ ${prefixTx}\2:/g;
 			p;
@@ -100,16 +107,16 @@ sed -En "
 				# d;
 				# ba;
 			} 
-		}
+		# }
 	}
-" ${sourceDbc} >> ${tx_bo}
+" ${sourceDbc} >> ${file_rxtx_msg}
 
 
-cat ${rx_bo} >> ${txt_rx_tx_bo}
-cat ${tx_bo} >> ${txt_rx_tx_bo}
+# cat ${rx_bo} >> ${txt_rx_tx_bo}
+# cat ${tx_bo} >> ${txt_rx_tx_bo}
 
 
-cat ${txt_rx_tx_bo} | while read target_line; do
+cat ${file_rxtx_msg} | while read target_line; do
 	echo ""
 	echo "target_line: ${target_line}"
 	target_line_id=`echo  ${target_line} | sed -E "/BO_ /s/(BO_ )([0-9]+)( \w+: .*)/\2/"`
@@ -123,7 +130,7 @@ cat ${txt_rx_tx_bo} | while read target_line; do
 				p;
 			}
 		}
-		" ${sourceDbc} >> ${txt_GenMsgCycleTime}
+		" ${sourceDbc} >> ${file_msgAttribute}
 	fi
 done
 
@@ -137,7 +144,7 @@ sed -En "
 	/^BU_/p;
 " ${sourceDbc} >> ${targetDbc}
 
-cat ${txt_rx_tx_bo} >> ${targetDbc}
+cat ${file_rxtx_msg} >> ${targetDbc}
 
 sed -En "	
 	/^$/p;
@@ -147,4 +154,4 @@ sed -En "
 	/^BA_ .BusType./p;
 " ${sourceDbc} >> ${targetDbc}
 
-cat ${txt_GenMsgCycleTime} >> ${targetDbc}
+cat ${file_msgAttribute} >> ${targetDbc}
