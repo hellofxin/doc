@@ -43,8 +43,8 @@ for i in $(seq ${local_networkmask} 254); do
   echo "i: ${i}"
   for j in $(seq 1 30); do
     ip="${ip_addr_part1}.${ip_addr_part2}.${i}.${j}"
-    echo "ping ip: $ip"
-    ping -c 1 -w 10 "$ip" >/dev/null 2>&1 && echo "Host $ip is up"
+    # echo "ping ip: $ip"
+    ping -c 1 -w 1 "$ip" >/dev/null 2>&1 && echo "Host $ip is up"
   done
 done
 
