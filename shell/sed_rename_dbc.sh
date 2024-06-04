@@ -1,5 +1,6 @@
 echo "======================================================================"
 
+# 输入DBC
 sourceDbc=$1
 echo "sourceDbc: ${sourceDbc}"
 if [ ! -e ${sourceDbc} ]; then
@@ -9,6 +10,7 @@ if [ ! -e ${sourceDbc} ]; then
 fi
 echo "sourceDbc: ${sourceDbc}"
 
+# 
 sourceNode=$2
 echo "sourceNode: ${sourceNode}"
 if [ -z ${sourceNode} ]; then
@@ -21,15 +23,16 @@ echo "sourceNode: ${sourceNode}"
 targetDbc=${sourceNode}_${sourceDbc}
 echo "targetDbc: ${targetDbc}"
 if [ -e ${targetDbc} ]; then
-	rm $targetDbc
+	# rm $targetDbc
+	mv ${targetDbc} "${targetDbc}.bak"
 fi
 touch $targetDbc
 
 
-prefixTx="ch${sourceNode}_tx_"
+prefixTx="CH${sourceNode}_TX_"
 echo "prefixTx: ${prefixTx}"
 
-prefixRx="ch${sourceNode}_rx_"
+prefixRx="CH${sourceNode}_RX_"
 echo "prefixRx: ${prefixRx}"
 
 prefixModified="TO_BE_MODIFIED::"
@@ -38,24 +41,8 @@ echo "prefixModified: ${prefixModified}"
 prefixDeleted="TO_BE_DELETED::"
 echo "prefixDeleted: ${prefixDeleted}"
 
+NodeName="HCU"
 
-# rx_bo="rx_bo_${sourceNode}.txt"
-# if [ -e $rx_bo ]; then
-# 	rm $rx_bo
-# fi
-# touch $rx_bo
-
-# tx_bo="tx_bo_${sourceNode}.txt"
-# if [ -e $tx_bo ]; then
-# 	rm $tx_bo
-# fi
-# touch $tx_bo
-
-# txt_rx_tx_bo="rx_tx_bo_${sourceNode}.txt"
-# if [ -e $txt_rx_tx_bo ]; then
-# 	rm $txt_rx_tx_bo
-# fi
-# touch $txt_rx_tx_bo
 
 file_rxtx_msg="${sourceNode}_rxtx_msg.txt"
 if [ -e $file_rxtx_msg ]; then
@@ -71,13 +58,13 @@ touch $file_msgAttribute
 
 
 sed -En "
-	/BO_ /{
-		/BDCU/!{
+	/^BO_ /{
+		/${NodeName}/!{
 			# /${prefixRx}/!{
 				s/ (ch._.x_)?(\w+):/ ${prefixRx}\2:/g;
 				h; 
 				:a; n; /SG_/{
-					/BDCU/!ba;
+					/${NodeName}/!ba;
 					s/: [0-9]+\|[0-9]+@/: 0\|64@/g;
 					H; g; p; b; 
 				}
@@ -86,10 +73,13 @@ sed -En "
 	}
 " ${sourceDbc} >> ${file_rxtx_msg}
 
+
+echo "" >> ${file_rxtx_msg}
 echo "" >> ${file_rxtx_msg}
 
+
 sed -En "
-	/^BO_ .*BDCU/{
+	/^BO_ .*${NodeName}/{
 		# /${prefixTx}/!{
 			# s/(.*)/${prefixModified}\1/;
 			s/ (ch._.x_)?(\w+):/ ${prefixTx}\2:/g;
@@ -117,13 +107,14 @@ sed -En "
 
 
 cat ${file_rxtx_msg} | while read target_line; do
-	echo ""
+	echo "======================================================================================================"
 	echo "target_line: ${target_line}"
 	target_line_id=`echo  ${target_line} | sed -E "/BO_ /s/(BO_ )([0-9]+)( \w+: .*)/\2/"`
 	echo "target_line_id: ${target_line_id}"
 
 	if [ "${target_line}" != "${target_line_id}" ]; then
-		echo "found: ${target_line_id}"
+		echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo "FOUND MSG: ${target_line_id}"
 		sed -En "
 		/BA_ .* BO_/{
 			/${target_line_id}/{
@@ -131,6 +122,10 @@ cat ${file_rxtx_msg} | while read target_line; do
 			}
 		}
 		" ${sourceDbc} >> ${file_msgAttribute}
+	else
+		echo "#########################################################################################"
+		echo "skip signal"
+		echo ""
 	fi
 done
 
@@ -155,3 +150,7 @@ sed -En "
 " ${sourceDbc} >> ${targetDbc}
 
 cat ${file_msgAttribute} >> ${targetDbc}
+
+# remove 中间文件
+rm $file_rxtx_msg
+rm $file_msgAttribute
