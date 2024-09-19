@@ -1,4 +1,7 @@
 echo "======================================================================"
+echo "Example:"
+echo "bash ./sed*dbc.sh BDCU_0.dbc 0 BDCU"
+echo "======================================================================"
 
 # 输入DBC
 sourceDbc=$1
@@ -11,16 +14,26 @@ fi
 echo "sourceDbc: ${sourceDbc}"
 
 # 
-sourceNode=$2
-echo "sourceNode: ${sourceNode}"
-if [ -z ${sourceNode} ]; then
+sourceNodeIndex=$2
+echo "sourceNodeIndex: ${sourceNodeIndex}"
+if [ -z ${sourceNodeIndex} ]; then
 	echo "source node is not specified"
 	echo "0 is used"
-	sourceNode='0'
+	sourceNodeIndex='0'
 fi
-echo "sourceNode: ${sourceNode}"
+echo "sourceNodeIndex: ${sourceNodeIndex}"
 
-targetDbc=${sourceNode}_${sourceDbc}
+sourceNodeName=$3
+echo "sourceNodeName: ${sourceNodeName}"
+if [ -z ${sourceNodeName} ]; then
+	echo "source node name is not specified"
+	echo "exit"
+	exit
+fi
+echo "sourceNodeName: ${sourceNodeName}"
+
+
+targetDbc=${sourceNodeIndex}_${sourceDbc}
 echo "targetDbc: ${targetDbc}"
 if [ -e ${targetDbc} ]; then
 	# rm $targetDbc
@@ -29,10 +42,10 @@ fi
 touch $targetDbc
 
 
-prefixTx="CH${sourceNode}_TX_"
+prefixTx="CH${sourceNodeIndex}_TX_"
 echo "prefixTx: ${prefixTx}"
 
-prefixRx="CH${sourceNode}_RX_"
+prefixRx="CH${sourceNodeIndex}_RX_"
 echo "prefixRx: ${prefixRx}"
 
 prefixModified="TO_BE_MODIFIED::"
@@ -41,16 +54,14 @@ echo "prefixModified: ${prefixModified}"
 prefixDeleted="TO_BE_DELETED::"
 echo "prefixDeleted: ${prefixDeleted}"
 
-NodeName="HCU"
 
-
-file_rxtx_msg="${sourceNode}_rxtx_msg.txt"
+file_rxtx_msg="${sourceNodeIndex}_rxtx_msg.txt"
 if [ -e $file_rxtx_msg ]; then
 	rm $file_rxtx_msg
 fi
 touch $file_rxtx_msg
 
-file_msgAttribute="${sourceNode}_msgAttribute.txt"
+file_msgAttribute="${sourceNodeIndex}_msgAttribute.txt"
 if [ -e $file_msgAttribute ]; then
 	rm $file_msgAttribute
 fi
@@ -59,12 +70,12 @@ touch $file_msgAttribute
 
 sed -En "
 	/^BO_ /{
-		/${NodeName}/!{
+		/${sourceNodeName}/!{
 			# /${prefixRx}/!{
 				s/ (ch._.x_)?(\w+):/ ${prefixRx}\2:/g;
 				h; 
 				:a; n; /SG_/{
-					/${NodeName}/!ba;
+					/${sourceNodeName}/!ba;
 					s/: [0-9]+\|[0-9]+@/: 0\|64@/g;
 					H; g; p; b; 
 				}
@@ -79,7 +90,7 @@ echo "" >> ${file_rxtx_msg}
 
 
 sed -En "
-	/^BO_ .*${NodeName}/{
+	/^BO_ .*${sourceNodeName}/{
 		# /${prefixTx}/!{
 			# s/(.*)/${prefixModified}\1/;
 			s/ (ch._.x_)?(\w+):/ ${prefixTx}\2:/g;
