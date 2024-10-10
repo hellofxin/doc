@@ -70,7 +70,7 @@ touch $file_msgAttribute
 
 sed -En "
 	/^BO_ /{
-		/${sourceNodeName}/!{
+		/:.*${sourceNodeName}$/!{
 			# /${prefixRx}/!{
 				s/ (ch._.x_)?(\w+):/ ${prefixRx}\2:/g;
 				h; 
@@ -90,7 +90,7 @@ echo "" >> ${file_rxtx_msg}
 
 
 sed -En "
-	/^BO_ .*${sourceNodeName}/{
+	/^BO_ .*:.*${sourceNodeName}$/{
 		# /${prefixTx}/!{
 			# s/(.*)/${prefixModified}\1/;
 			s/ (ch._.x_)?(\w+):/ ${prefixTx}\2:/g;
