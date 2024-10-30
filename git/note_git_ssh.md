@@ -14,5 +14,5 @@ ssh -T git@github.com
 git pull git@github.com:userName/repository.git
 
 // note that you might need to add id_rsa to ssh-agent everytime you start git-bash
-// 如果因为本地没有repo而pull失败，则先clone
+// 濡傛灉鍥犱负鏈湴娌℃湁repo鑰宲ull澶辫触锛屽垯鍏坈lone
 git clone git@github.com:hellofxin/folder.git
