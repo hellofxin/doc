@@ -40,7 +40,7 @@ Disk /dev/nvme0n1: 1.86 TiB, 2048408248320 bytes, 4000797360 sectors
 
 ### clear SSD
 ```sh
-pi@pi$ sudo dd bs=1M if=/dev/zero of=/dev/nvme0n1 count=2000 status=progess
+pi@pi$ sudo dd bs=1M if=/dev/zero of=/dev/nvme0n1 count=2000 status=progress
 pi@pi$ sync
 ```
 
